@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import api, { AxiosError } from '@/lib/api';
+import api from '@/lib/api';
+import { AxiosError } from 'axios';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -22,11 +23,13 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const response = await api.post('/auth/login', { email, password });
-      login(response.data.tokens, response.data.user);
+      const response = await api.post('/api/v1/auth/login', { email, password });
+      const { user, accessToken, refreshToken } = response.data.data;
+      login({ accessToken, refreshToken }, user);
       router.push('/');
-    } catch (err: AxiosError) {
-      setError(err.response?.data?.message || 'Đăng nhập thất bại');
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError;
+      setError((axiosErr.response?.data as { message?: string })?.message || 'Đăng nhập thất bại');
     } finally {
       setLoading(false);
     }
@@ -36,15 +39,13 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-xl">
         <div>
-          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-6">
+          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-red-600 to-red-400 rounded-2xl flex items-center justify-center mb-6">
             <LogIn className="h-8 w-8 text-white" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
             Đăng nhập
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Chào mừng quay lại DRC Tires
-          </p>
+          
         </div>
         {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>}
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -77,8 +78,8 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+          <Button type="submit" className="w-full py-4 bg-red-600 text-white font-black rounded-2xl shadow-xl shadow-red-100 uppercase tracking-widest mt-6 hover:bg-red-700 transition-all" disabled={loading}>
+            {loading ? 'Đang đăng nhập...' : 'Vào hệ thống'}
           </Button>
 
           <div className="text-center">

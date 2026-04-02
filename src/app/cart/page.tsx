@@ -35,7 +35,7 @@ export default function CartPage() {
                 <div key={item.product_id} className="flex gap-6 p-6 bg-white rounded-2xl shadow-lg">
                   <Image
                     src={item.product?.images?.[0]?.url || '/placeholder.svg'}
-                    alt={item.product?.name}
+                    alt={item.product?.name || 'Sản phẩm'}
                     width={120}
                     height={120}
                     className="object-cover rounded-xl flex-shrink-0"

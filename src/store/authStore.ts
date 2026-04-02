@@ -6,6 +6,7 @@ interface AuthState {
   accessToken: string | null;
   login: (tokens: AuthTokens, user: User) => void;
   logout: () => void;
+  updateUser: (user: User) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -21,4 +22,5 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('refreshToken');
     set({ user: null, accessToken: null });
   },
+  updateUser: (user) => set({ user }),
 }));

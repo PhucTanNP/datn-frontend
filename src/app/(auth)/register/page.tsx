@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import api, { AxiosError } from '@/lib/api';
+import api from '@/lib/api';
+import { AxiosError } from 'axios';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -29,8 +30,9 @@ export default function RegisterPage() {
       const response = await api.post('/auth/register', formData);
       login(response.data.tokens, response.data.user);
       router.push('/');
-    } catch (err: AxiosError) {
-      setError(err.response?.data?.message || 'Đăng ký thất bại');
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ message?: string }>;
+      setError(axiosErr.response?.data?.message || 'Đăng ký thất bại');
     } finally {
       setLoading(false);
     }
