@@ -27,8 +27,9 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
     try {
-      const response = await api.post('/auth/register', formData);
-      login(response.data.tokens, response.data.user);
+      const response = await api.post('/api/v1/auth/register', formData);
+      const { user, accessToken, refreshToken } = response.data;
+      login({ accessToken, refreshToken }, user);
       router.push('/');
     } catch (err: unknown) {
       const axiosErr = err as AxiosError<{ message?: string }>;

@@ -10,34 +10,34 @@ export interface Category {
 
 export interface ProductImage {
   id: string;
-  product_id: string;
-  cloudinary_id: string;
+  productId: string;
+  cloudinaryId: string;
   url: string;
-  alt_text?: string;
-  is_primary: boolean;
-  sort_order: number;
-  created_at: string;
+  altText?: string;
+  isPrimary: boolean;
+  sortOrder: number;
+  createdAt: string;
 }
 
 export interface Product {
   id: string;
-  category_id: string;
+  categoryId: string;
   sku: string;
   name: string;
   slug: string;
   description?: string;
   price: number;
-  sale_price?: number;
-  stock_quantity: number;
+  salePrice?: number;
+  stockQuantity: number;
   size?: string;
-  rim_diameter?: number;
-  load_index?: string;
-  speed_rating?: string;
-  tire_type?: 'passenger' | 'SUV' | 'truck' | 'motorcycle';
-  ai_label?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  rimDiameter?: number;
+  loadIndex?: string;
+  speedRating?: string;
+  tireType?: 'passenger' | 'SUV' | 'truck' | 'motorcycle';
+  aiLabel?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
   category?: Category;
   images?: ProductImage[];
 }

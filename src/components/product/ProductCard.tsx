@@ -7,6 +7,14 @@ import { Product } from '@/types/product';
 import { useCartStore } from '@/store/cartStore';
 import { ShoppingCart } from 'lucide-react';
 
+// Helper function to get primary image or fallback
+// Backend response includes images array with full ProductImage objects
+const getProductImage = (product: Product): string => {
+  return product.images?.find(img => img.isPrimary)?.url ||
+         product.images?.[0]?.url ||
+         '/placeholder.svg';
+};
+
 interface ProductCardProps {
   product: Product;
 }
@@ -18,12 +26,12 @@ export function ProductCard({ product }: ProductCardProps) {
     <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden h-full flex flex-col">
       <div className="relative h-64 bg-gradient-to-br from-gray-50 to-gray-100">
         <Image
-          src={product.images?.[0]?.url || '/placeholder.svg'}
+          src={getProductImage(product)}
           alt={product.name}
           fill
           className="object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        {product.sale_price && (
+        {product.salePrice && (
           <div className="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold">
             Sale
           </div>
@@ -33,20 +41,20 @@ export function ProductCard({ product }: ProductCardProps) {
         <Link href={`/products/${product.slug}`} className="hover:underline">
           <h3 className="font-bold text-lg mb-2 line-clamp-2">{product.name}</h3>
         </Link>
-        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{product.size} - {product.tire_type}</p>
+        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{product.size} - {product.tireType}</p>
         <div className="flex items-center justify-between mb-4 flex-1">
           <div className="space-y-1">
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-gray-900">
-                {product.sale_price?.toLocaleString('vi-VN')}đ
+                {(product.salePrice || product.price).toLocaleString('vi-VN')}đ
               </span>
-              {product.sale_price && (
+              {product.salePrice && (
                 <span className="text-sm text-muted-foreground line-through">
                   {product.price.toLocaleString('vi-VN')}đ
                 </span>
               )}
             </div>
-            <span className="text-xs text-green-600 font-medium">Còn {product.stock_quantity} sản phẩm</span>
+            <span className="text-xs text-green-600 font-medium">Còn {product.stockQuantity} sản phẩm</span>
           </div>
         </div>
         <Button 

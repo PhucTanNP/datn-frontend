@@ -1,28 +1,106 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ProductCard } from '@/components/product/ProductCard';
 import api from '@/lib/api';
-import { Product } from '@/types/product';
+import { Product, Category } from '@/types/product';
 import { Button } from '@/components/ui/Button';
-import { Search, Filter } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+
+interface PaginationData {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+interface ProductsResponse {
+  products: Product[];
+  pagination: PaginationData;
+}
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [tireType, setTireType] = useState<string>('');
+  const [size, setSize] = useState<string>('');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [sort, setSort] = useState<string>('name:asc');
+  const [pagination, setPagination] = useState<PaginationData | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const loadCategories = async () => {
+    try {
+      const response = await api.get('/api/v1/categories');
+      setCategories(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+    }
+  };
+
+  const loadProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // Build query params
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: '12', // 12 products per page
+        sort: sort
+      });
+
+      if (selectedCategory) params.append('category', selectedCategory);
+      if (tireType) params.append('tireType', tireType);
+      if (size) params.append('size', size);
+      if (minPrice) params.append('minPrice', minPrice);
+      if (maxPrice) params.append('maxPrice', maxPrice);
+      if (search) params.append('search', search);
+
+      const response = await api.get(`/api/v1/products?${params.toString()}`);
+      const data: ProductsResponse = response.data.data;
+
+      setProducts(data.products || []);
+      setPagination(data.pagination);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, selectedCategory, tireType, size, minPrice, maxPrice, sort, search]);
+
+  // Products are now filtered by backend API
+  const displayedProducts = products;
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  const clearFilters = () => {
+    setSearch('');
+    setSelectedCategory('');
+    setTireType('');
+    setSize('');
+    setMinPrice('');
+    setMaxPrice('');
+    setSort('name:asc');
+    setCurrentPage(1);
+    loadProducts();
+  };
 
   useEffect(() => {
-    api.get('/products')
-      .then(res => setProducts(res.data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    loadCategories();
   }, []);
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.sku.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   if (loading) {
     return <div className="container py-20 text-center">Đang tải...</div>;
@@ -35,30 +113,118 @@ export default function ProductsPage() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
             Tất cả sản phẩm
           </h1>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                className="w-64 pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Tìm kiếm sản phẩm..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              Bộ lọc
+          {/* Search */}
+        <form onSubmit={handleSearch} className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              className="w-64 pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Tìm kiếm sản phẩm..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button type="submit" variant="outline">Tìm kiếm</Button>
+        </form>
+
+        {/* Filters */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <select
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <option value="">Tất cả danh mục</option>
+            {categories.map(category => (
+              <option key={category.id} value={category.slug}>{category.name}</option>
+            ))}
+          </select>
+
+          <select
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            value={tireType}
+            onChange={(e) => setTireType(e.target.value)}
+          >
+            <option value="">Tất cả loại lốp</option>
+            <option value="motorcycle">Lốp xe máy</option>
+            <option value="passenger">Lốp xe hơi</option>
+            <option value="SUV">Lốp SUV</option>
+            <option value="truck">Lốp xe tải</option>
+          </select>
+
+          <input
+            type="number"
+            placeholder="Giá từ"
+            className="w-24 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+          />
+          <input
+            type="number"
+            placeholder="Giá đến"
+            className="w-24 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+          />
+
+          <select
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+          >
+            <option value="name:asc">Tên A-Z</option>
+            <option value="name:desc">Tên Z-A</option>
+            <option value="price:asc">Giá thấp → cao</option>
+            <option value="price:desc">Giá cao → thấp</option>
+          </select>
+
+          <Button onClick={clearFilters} variant="outline" size="sm">
+            Xóa bộ lọc
             </Button>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => (
+          {displayedProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
-        {filteredProducts.length === 0 && (
+        {displayedProducts.length === 0 && (
           <div className="text-center py-20">
             <p className="text-xl text-muted-foreground mb-4">Không tìm thấy sản phẩm nào.</p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex items-center justify-center gap-4 mt-12">
+            <Button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={!pagination.hasPrev}
+              variant="outline"
+              size="sm"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Trước
+            </Button>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                Trang {pagination.page} / {pagination.totalPages}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                ({pagination.total} sản phẩm)
+              </span>
+            </div>
+
+            <Button
+              onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
+              disabled={!pagination.hasNext}
+              variant="outline"
+              size="sm"
+            >
+              Sau
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
           </div>
         )}
       </div>
