@@ -26,7 +26,11 @@ export default function LoginPage() {
       const response = await api.post('/api/v1/auth/login', { email, password });
       const { user, accessToken, refreshToken } = response.data.data;
       login({ accessToken, refreshToken }, user);
-      router.push('/');
+      if (user.role === 'admin') {
+        router.push('/admin/dashboard');
+      }else {
+        router.push('/');
+      }
     } catch (err: unknown) {
       const axiosErr = err as AxiosError;
       setError((axiosErr.response?.data as { message?: string })?.message || 'Đăng nhập thất bại');

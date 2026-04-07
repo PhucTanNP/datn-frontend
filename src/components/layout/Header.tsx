@@ -1,13 +1,18 @@
 'use client';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { ShoppingBag, Phone, MapPin, LogOut } from 'lucide-react';
 
 export function Header() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, initialize } = useAuthStore();
   const { items } = useCartStore();
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  useEffect(() => {
+    initialize().catch(console.error);
+  }, [initialize]);
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/Button';
@@ -10,10 +11,41 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, logout } = useAuthStore();
+  const { user, logout, accessToken } = useAuthStore();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!accessToken) {
+      window.location.href = '/login';
+      return;
+    }
+
+    let attempts = 0;
+    const maxAttempts = 50; // 5 seconds (100ms * 50)
+
+    // Chờ user được fetch từ Header's initialize
+    const checkUser = () => {
+      if (user !== null) {
+        setLoading(false);
+      } else if (attempts >= maxAttempts) {
+        // Timeout: Nếu sau 5s vẫn chưa có user, có thể token invalid hoặc API lỗi
+        console.error('Timeout waiting for user data');
+        window.location.href = '/login'; // Hoặc hiển thị lỗi
+      } else {
+        attempts++;
+        setTimeout(checkUser, 100);
+      }
+    };
+
+    checkUser();
+  }, [accessToken, user]);
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Đang tải...</div>;
+  }
 
   if (user?.role !== 'admin') {
-    return <div>Truy cập bị từ chối. Chỉ admin.</div>;
+    return <div className="min-h-screen flex items-center justify-center">Truy cập bị từ chối. Chỉ admin.</div>;
   }
 
   return (
