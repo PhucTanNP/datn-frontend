@@ -47,7 +47,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // If we have accessToken, try to fetch user info
     if (state.accessToken) {
       try {
-        const response = await api.get('/api/v1/auth/refresh');
+        const response = await api.get('/api/v1/auth/profile');
         const user = response.data.data;
         set({ user });
       } catch (error) {
