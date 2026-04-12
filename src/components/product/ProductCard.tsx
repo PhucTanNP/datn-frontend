@@ -59,7 +59,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
         <Button 
           onClick={() => addItem(product)}
-          className="mt-auto w-full group-hover:bg-primary/95"
+          className="mt-auto w-full bg-red-600 hover:bg-red-700"
         >
           <ShoppingCart className="mr-2 h-4 w-4" />
           Thêm vào giỏ
