@@ -24,7 +24,7 @@ export default function AdminPage() {
             <Link
               key={t.id}
               href={t.href}
-              className={`flex items-center gap-2 py-3 px-5 rounded-2xl font-black text-[10px] uppercase tracking-widest whitespace-nowrap transition-all ${activeTab === t.id ? 'bg-red-600 text-white shadow-xl shadow-red-100 scale-105' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+              className={`flex items-center gap-2 py-3 px-5 rounded-2xl font-black text-xs uppercase tracking-widest whitespace-nowrap transition-all ${activeTab === t.id ? 'bg-red-600 text-white shadow-xl shadow-red-100 scale-105' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
               onClick={() => setActiveTab(t.id)}
             >
               <t.icon size={16} /> {t.label}

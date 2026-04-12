@@ -45,6 +45,16 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    productId: string | null;
+    productName: string;
+  }>({
+    isOpen: false,
+    productId: null,
+    productName: ''
+  });
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -179,16 +189,33 @@ export default function ProductsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (productId: string) => {
-    if (!confirm("Xóa sản phẩm này khỏi hệ thống?")) return;
+  const handleDeleteClick = (productId: string, productName: string) => {
+    setDeleteModal({
+      isOpen: true,
+      productId,
+      productName
+    });
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal.productId) return;
+
+    setDeleting(true);
     try {
-      await api.delete(`/api/v1/admin/products/${productId}`);
+      await api.delete(`/api/v1/admin/products/${deleteModal.productId}`);
       await loadProducts();
+      setDeleteModal({ isOpen: false, productId: null, productName: '' });
     } catch (error) {
       console.error('Failed to delete product:', error);
+      // Có thể thêm toast notification thay vì alert
       alert('Xóa sản phẩm thất bại. Vui lòng thử lại.');
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModal({ isOpen: false, productId: null, productName: '' });
   };
 
   if (loading) {
@@ -221,7 +248,7 @@ export default function ProductsPage() {
                   ) : (
                     <>
                       <Upload size={48} className="mx-auto text-gray-200 mb-4 group-hover:text-red-600 transition-colors" />
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tải ảnh lên Cloudinary</p>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tải ảnh lên </p>
                       <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} accept="image/*" />
                     </>
                   )}
@@ -292,7 +319,7 @@ export default function ProductsPage() {
                     <td className="p-6">
                       <div className="flex gap-3">
                         <button onClick={() => handleEdit(p)} className="p-3 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"><Edit size={20} /></button>
-                        <button onClick={() => handleDelete(p.id)} className="p-3 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={20} /></button>
+                        <button onClick={() => handleDeleteClick(p.id, p.name)} className="p-3 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={20} /></button>
                       </div>
                     </td>
                   </tr>
@@ -302,6 +329,51 @@ export default function ProductsPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-200">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Xác nhận xóa</h3>
+                <p className="text-sm text-gray-600">Hành động này không thể hoàn tác</p>
+              </div>
+            </div>
+
+            <p className="text-gray-700 mb-6">
+              Bạn có chắc chắn muốn xóa sản phẩm <span className="font-semibold text-gray-900">{deleteModal.productName}</span> không?
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleDeleteCancel}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={deleting}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                    Đang xóa...
+                  </div>
+                ) : (
+                  'Xóa sản phẩm'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

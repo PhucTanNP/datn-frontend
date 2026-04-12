@@ -25,6 +25,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [tireType, setTireType] = useState<string>('');
@@ -37,42 +38,76 @@ export default function ProductsPage() {
 
   const loadCategories = async () => {
     try {
+      setError(null);
+      console.log('Loading categories...');
       const response = await api.get('/api/v1/categories');
+      console.log('Categories response:', response.data);
       setCategories(response.data.data || []);
     } catch (error) {
       console.error('Failed to load categories:', error);
+      setError('Không thể tải danh mục sản phẩm. Vui lòng thử lại sau.');
+      // Thử endpoint khác
+      try {
+        const fallbackResponse = await api.get('/categories');
+        console.log('Fallback categories response:', fallbackResponse.data);
+        setCategories(fallbackResponse.data.data || []);
+        setError(null);
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
     }
   };
 
   const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
+      console.log('Loading products with filters:', {
+        currentPage, selectedCategory, tireType, size, minPrice, maxPrice, search
+      });
 
       // Build query params
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: '12', // 12 products per page
-        sort: sort
       });
 
       if (selectedCategory) params.append('category', selectedCategory);
-      if (tireType) params.append('tireType', tireType);
+      if (tireType) params.append('tire_type', tireType);
       if (size) params.append('size', size);
-      if (minPrice) params.append('minPrice', minPrice);
-      if (maxPrice) params.append('maxPrice', maxPrice);
+      if (minPrice) params.append('min_price', minPrice);
+      if (maxPrice) params.append('max_price', maxPrice);
       if (search) params.append('search', search);
 
       const response = await api.get(`/api/v1/products?${params.toString()}`);
-      const data: ProductsResponse = response.data.data;
+      console.log('Products response:', response.data);
 
-      setProducts(data.products || []);
-      setPagination(data.pagination);
+      setProducts(response.data.data || []);
+      setPagination(response.data.pagination);
     } catch (error) {
       console.error('Failed to load products:', error);
+      setError('Không thể tải sản phẩm. Vui lòng thử lại sau.');
+      // Thử fallback endpoint
+      try {
+        const fallbackParams = new URLSearchParams({
+          page: currentPage.toString(),
+          limit: '12'
+        });
+        if (search) fallbackParams.append('search', search);
+
+        const fallbackResponse = await api.get(`/products?${fallbackParams.toString()}`);
+        console.log('Fallback products response:', fallbackResponse.data);
+
+        setProducts(fallbackResponse.data.data || []);
+        setPagination(fallbackResponse.data.pagination);
+        setError(null);
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
     } finally {
       setLoading(false);
     }
-  }, [currentPage, selectedCategory, tireType, size, minPrice, maxPrice, sort, search]);
+  }, [currentPage, selectedCategory, tireType, size, minPrice, maxPrice, search]);
 
   // Products are now filtered by backend API
   const displayedProducts = products;
@@ -104,6 +139,26 @@ export default function ProductsPage() {
 
   if (loading) {
     return <div className="container py-20 text-center">Đang tải...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="container py-20 text-center">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+          <h3 className="text-red-800 font-semibold mb-2">Lỗi tải dữ liệu</h3>
+          <p className="text-red-600 text-sm">{error}</p>
+          <button
+            onClick={() => {
+              loadCategories();
+              loadProducts();
+            }}
+            className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

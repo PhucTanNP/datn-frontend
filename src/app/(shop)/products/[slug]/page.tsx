@@ -202,7 +202,7 @@ export default function ProductDetailPage() {
                 <Truck className="h-8 w-8 text-blue-600" />
                 <div>
                   <p className="font-semibold text-sm">Miễn phí vận chuyển</p>
-                  <p className="text-xs text-gray-600">Đơn hàng từ 500k</p>
+                  <p className="text-sm text-gray-600">Đơn hàng từ 500k</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">

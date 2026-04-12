@@ -32,7 +32,7 @@ export function ProductCard({ product }: ProductCardProps) {
           className="object-cover group-hover:scale-105 transition-transform duration-300"
         />
         {product.salePrice && (
-          <div className="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold">
+          <div className="absolute top-3 left-3 bg-red-500 text-white text-sm px-2 py-1 rounded-full font-bold">
             Sale
           </div>
         )}
@@ -54,7 +54,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 </span>
               )}
             </div>
-            <span className="text-xs text-green-600 font-medium">Còn {product.stockQuantity} sản phẩm</span>
+            <span className="text-sm text-green-600 font-medium">Còn {product.stockQuantity} sản phẩm</span>
           </div>
         </div>
         <Button 

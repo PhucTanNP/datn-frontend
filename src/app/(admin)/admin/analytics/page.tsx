@@ -9,13 +9,13 @@ export default function AnalyticsPage() {
           <div className="flex justify-between items-center mb-10">
             <h3 className="font-black uppercase text-xl italic tracking-tighter">Sản lượng lốp tiêu thụ</h3>
             <div className="flex gap-2">
-              {['Tuần', 'Tháng', 'Năm'].map(p => <button key={p} className={`px-5 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${p === 'Tháng' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-400 hover:text-gray-900'}`}>{p}</button>)}
+              {['Tuần', 'Tháng', 'Năm'].map(p => <button key={p} className={`px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${p === 'Tháng' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-400 hover:text-gray-900'}`}>{p}</button>)}
             </div>
           </div>
           <div className="h-80 flex items-end justify-between gap-3 px-2 border-b-2 border-gray-100 pb-2">
              {[60, 40, 85, 30, 95, 55, 75, 45, 80, 50, 90, 100].map((h, i) => (
                <div key={i} className="flex-1 bg-gradient-to-t from-red-600 to-red-400 rounded-2xl relative group transition-all hover:scale-105 shadow-xl shadow-red-100" style={{ height: `${h}%` }}>
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[9px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity font-black">T.{i+1}</div>
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity font-black">T.{i+1}</div>
                </div>
              ))}
           </div>
