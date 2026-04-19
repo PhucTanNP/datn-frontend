@@ -1,4 +1,11 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /api/
+
+# Crawl delay
+Crawl-delay: 1
 
 Sitemap: https://minhphatdrc.id.vn/sitemap.xml
