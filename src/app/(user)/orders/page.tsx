@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/Button';
+import Loading from '@/app/loading';
 
 interface Order {
   id: string;
@@ -23,7 +24,7 @@ export default function OrdersPage() {
     }).catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div>Đang tải...</div>;
+  if (loading) return <Loading />;
 
   return (
     <div className="min-h-screen py-12">

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Upload, X, Search } from 'lucide-react';
 import api from '@/lib/api';
 import type { Category } from '@/types/product';
+import Loading from '@/app/loading';
 
 interface CategoryForm {
   id: string | null;
@@ -154,11 +155,7 @@ export default function CategoriesPage() {
   );
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full"></div>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { ProductCard } from '@/components/product/ProductCard';
+
 
 
 
@@ -28,6 +28,7 @@ export default function Home() {
           {/* {mockProducts.slice(0, 4).map(p => <ProductCard key={p.id} product={p} />)} */}
         </div>
       </div>
+      
     </div>
   );
 }

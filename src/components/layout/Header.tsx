@@ -1,6 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { ShoppingBag, Phone, MapPin, LogOut } from 'lucide-react';
@@ -9,6 +10,10 @@ export function Header() {
   const { user, logout, initialize } = useAuthStore();
   const { items } = useCartStore();
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const pathname = usePathname();
+
+  // Ẩn cart khi ở trang products (shop routes)
+  const hideCart = pathname?.startsWith('/products') || pathname?.startsWith('/checkout');
 
   useEffect(() => {
     initialize().catch(console.error);
@@ -48,14 +53,16 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Link href="/cart" className="relative p-2 text-gray-600 hover:text-red-600 transition-colors">
-            <ShoppingBag size={24} />
-            {cartCount > 0 && (
-              <span className="absolute top-0 right-0 bg-red-600 text-white text-[10px] font-black rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-                {cartCount}
-              </span>
-            )}
-          </Link>
+          {!hideCart && (
+            <Link href="/cart" className="relative p-2 text-gray-600 hover:text-red-600 transition-colors">
+              <ShoppingBag size={24} />
+              {cartCount > 0 && (
+                <span className="absolute top-0 right-0 bg-red-600 text-white text-[10px] font-black rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+          )}
           
           {user ? (
             <div className="flex items-center gap-2">

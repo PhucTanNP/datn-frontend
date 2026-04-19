@@ -7,6 +7,8 @@ export interface User {
   role: 'customer' | 'admin';
   avatar_url?: string;
   is_active: boolean;
+  status?: 'active' | 'inactive';
+  note?: string;
   created_at: string;
   updated_at: string;
 }

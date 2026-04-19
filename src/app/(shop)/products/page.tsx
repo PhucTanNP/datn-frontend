@@ -5,7 +5,10 @@ import { ProductCard } from '@/components/product/ProductCard';
 import api from '@/lib/api';
 import { Product, Category } from '@/types/product';
 import { Button } from '@/components/ui/Button';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react';
+import { useCartStore } from '@/store/cartStore';
+import Link from 'next/link';
+import Loading from '@/app/loading';
 
 interface PaginationData {
   total: number;
@@ -14,11 +17,6 @@ interface PaginationData {
   totalPages: number;
   hasNext: boolean;
   hasPrev: boolean;
-}
-
-interface ProductsResponse {
-  products: Product[];
-  pagination: PaginationData;
 }
 
 export default function ProductsPage() {
@@ -48,7 +46,7 @@ export default function ProductsPage() {
       setError('Không thể tải danh mục sản phẩm. Vui lòng thử lại sau.');
       // Thử endpoint khác
       try {
-        const fallbackResponse = await api.get('/categories');
+        const fallbackResponse = await api.get('/api/v1/categories');
         console.log('Fallback categories response:', fallbackResponse.data);
         setCategories(fallbackResponse.data.data || []);
         setError(null);
@@ -95,7 +93,7 @@ export default function ProductsPage() {
         });
         if (search) fallbackParams.append('search', search);
 
-        const fallbackResponse = await api.get(`/products?${fallbackParams.toString()}`);
+        const fallbackResponse = await api.get(`/api/v1/products?${fallbackParams.toString()}`);
         console.log('Fallback products response:', fallbackResponse.data);
 
         setProducts(fallbackResponse.data.data || []);
@@ -138,7 +136,7 @@ export default function ProductsPage() {
   }, [loadProducts]);
 
   if (loading) {
-    return <div className="container py-20 text-center">Đang tải...</div>;
+    return <Loading />;
   }
 
   if (error) {
@@ -282,7 +280,32 @@ export default function ProductsPage() {
             </Button>
           </div>
         )}
+
+        {/* Floating Cart Button */}
+        <FloatingCartButton />
       </div>
     </div>
+  );
+}
+
+// Floating Cart Button Component
+function FloatingCartButton() {
+  const cartItems = useCartStore((state) => state.items);
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  return (
+    <Link
+      href="/cart"
+      className="fixed bottom-6 left-6 z-50 bg-red-600 hover:bg-red-700 text-white p-4 rounded-full shadow-2xl shadow-red-600/30 transition-all duration-300 hover:scale-110 group"
+    >
+      <div className="relative">
+        <ShoppingCart size={24} className="group-hover:scale-110 transition-transform" />
+        {totalItems > 0 && (
+          <span className="absolute -top-2 -right-2 bg-white text-red-600 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-red-600 animate-pulse">
+            {totalItems > 99 ? '99+' : totalItems}
+          </span>
+        )}
+      </div>
+    </Link>
   );
 }

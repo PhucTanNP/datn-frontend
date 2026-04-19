@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { FileText } from 'lucide-react';
 import api from '@/lib/api';
 import type { Order } from '@/types/order';
+import Loading from '@/app/loading';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -48,11 +49,7 @@ export default function OrdersPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full"></div>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (

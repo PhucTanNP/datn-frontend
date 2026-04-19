@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { useCartStore } from '@/store/cartStore';
 import { ArrowLeft, ShoppingCart, Truck, Shield, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
+import Loading from '@/app/loading';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -41,11 +42,7 @@ export default function ProductDetailPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full"></div>
-      </div>
-    );
+    return <Loading />;
   }
 
   if (!product) {

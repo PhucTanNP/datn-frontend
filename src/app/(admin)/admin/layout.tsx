@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import {  BarChart3, Package, FileText, Users, TrendingUp } from 'lucide-react';
+import Loading from '@/app/loading';
 
 export default function AdminLayout({
   children,
@@ -50,7 +51,7 @@ export default function AdminLayout({
   }, [accessToken, user]);
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Đang tải...</div>;
+    return <Loading />;
   }
 
   if (user?.role !== 'admin') {

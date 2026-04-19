@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import type { Order } from '@/types/order';
 import type { User } from '@/types/auth';
 import type { Product, Category } from '@/types/product';
+import Loading from '@/app/loading';
 
 export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -44,11 +45,7 @@ export default function DashboardPage() {
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full"></div>
-      </div>
-    );
+     return <Loading />;
   }
 
   return (

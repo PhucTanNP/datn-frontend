@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Plus, Edit, Trash2, Upload, X, Search, Info, Scale, ShieldCheck, Zap, Wind, Volume2, Tag, LinkIcon, Database, Star, Check } from 'lucide-react';
 import api from '@/lib/api';
 import type { Product, Category } from '@/types/product';
+import Loading from '@/app/loading';
 
 // Helper function to get primary image or fallback
 // Backend response includes images array with full ProductImage objects
@@ -310,11 +311,7 @@ export default function ProductsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full"></div>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (
