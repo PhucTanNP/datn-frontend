@@ -2,17 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import { Button } from '@/components/ui/Button';
-import { LogOut } from 'lucide-react';
+import {  BarChart3, Package, FileText, Users, TrendingUp } from 'lucide-react';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, logout, accessToken } = useAuthStore();
+  const { user, accessToken } = useAuthStore();
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+
+  const tabs = [
+    { id: 'dashboard', label: 'Tổng quan', icon: BarChart3, href: '/admin/dashboard' },
+    { id: 'products', label: 'Kho hàng', icon: Package, href: '/admin/products' },
+    { id: 'orders', label: 'Đơn hàng', icon: FileText, href: '/admin/orders' },
+    { id: 'users', label: 'Người dùng', icon: Users, href: '/admin/users' },
+    { id: 'analytics', label: 'Phân tích', icon: TrendingUp, href: '/admin/analytics' }
+  ];
 
   useEffect(() => {
     if (!accessToken) {
@@ -50,31 +59,42 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex">
-        {/* Sidebar */}
-        <div className="w-64 bg-white shadow-lg">
-          <div className="p-6 border-b">
-            <h2 className="text-2xl font-bold">Admin DRC</h2>
+      {/* Main Content */}
+      <div className="flex flex-col min-h-screen">
+          {/* Header */}
+
+
+          {/* Top Navigation Tabs */}
+          <div className="bg-white border-b shadow-sm">
+          <div className="px-4 py-3">
+            
+            
+              <div className="flex justify-between gap-2 bg-gray-100 p-1.5 rounded-full shadow-inner">
+                {tabs.map(t => (
+                  <Link
+                    key={t.id}
+                    href={t.href}
+                    className={`
+                      flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all
+                      ${pathname === t.href || (t.href !== '/admin/dashboard' && pathname.startsWith(t.href))
+                        ? 'bg-red-600 text-white shadow-md scale-105'
+                        : 'text-gray-500 hover:text-gray-800 hover:bg-white'
+                      }
+                    `}
+                  >
+                    <t.icon size={14} />
+                    {t.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
-          <nav className="p-4 space-y-2">
-            <Link href="/admin/dashboard" className="block p-3 rounded-lg hover:bg-gray-100">Dashboard</Link>
-            <Link href="/admin/products" className="block p-3 rounded-lg hover:bg-gray-100">Sản phẩm</Link>
-            <Link href="/admin/orders" className="block p-3 rounded-lg hover:bg-gray-100">Đơn hàng</Link>
-            <Link href="/admin/users" className="block p-3 rounded-lg hover:bg-gray-100">Người dùng</Link>
-            <Link href="/admin/analytics" className="block p-3 rounded-lg hover:bg-gray-100">Phân tích</Link>
-          </nav>
-        </div>
-        <div className="flex-1 flex flex-col">
-          <header className="bg-white border-b p-4 flex justify-between items-center">
-            <h1 className="text-xl font-semibold">Admin Panel</h1>
-            <Button variant="ghost" onClick={logout} className="flex items-center gap-2">
-              <LogOut className="h-4 w-4" />
-              Đăng xuất
-            </Button>
-          </header>
-          <main className="p-8 overflow-auto">{children}</main>
+ 
+          {/* Page Content */}
+          <main className="flex-1 overflow-auto">
+            {children}
+          </main>
         </div>
       </div>
-    </div>
   );
 }

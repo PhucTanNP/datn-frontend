@@ -93,64 +93,6 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 mb-8">
-        <h3 className="font-black uppercase mb-6 text-lg italic tracking-tight">Quản lý nhanh</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <button onClick={() => window.location.href = '/admin/products'} className="p-4 bg-gray-50 hover:bg-red-50 rounded-2xl text-left group transition-colors">
-            <div className="text-2xl mb-2">📦</div>
-            <p className="text-sm font-black text-gray-900 group-hover:text-red-600">Sản phẩm</p>
-            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Quản lý kho</p>
-          </button>
-          <button onClick={() => window.location.href = '/admin/categories'} className="p-4 bg-gray-50 hover:bg-red-50 rounded-2xl text-left group transition-colors">
-            <div className="text-2xl mb-2">🏷️</div>
-            <p className="text-sm font-black text-gray-900 group-hover:text-red-600">Danh mục</p>
-            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Phân loại</p>
-          </button>
-          <button onClick={() => window.location.href = '/admin/orders'} className="p-4 bg-gray-50 hover:bg-red-50 rounded-2xl text-left group transition-colors">
-            <div className="text-2xl mb-2">📋</div>
-            <p className="text-sm font-black text-gray-900 group-hover:text-red-600">Đơn hàng</p>
-            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Xử lý đơn</p>
-          </button>
-          <button onClick={() => window.location.href = '/admin/users'} className="p-4 bg-gray-50 hover:bg-red-50 rounded-2xl text-left group transition-colors">
-            <div className="text-2xl mb-2">👥</div>
-            <p className="text-sm font-black text-gray-900 group-hover:text-red-600">Khách hàng</p>
-            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Quản lý user</p>
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-10 rounded-[40px] shadow-xl border border-gray-100">
-          <h3 className="font-black uppercase mb-8 flex items-center gap-3 text-lg italic tracking-tight border-b pb-4"><AlertCircle className="text-orange-500" /> Đơn hàng mới</h3>
-          <div className="space-y-6">
-            {orders.slice(0, 5).map(o => (
-              <div key={o.id} className="flex items-center justify-between group">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center font-black text-gray-300 group-hover:bg-red-50 group-hover:text-red-600 transition-colors">DRC</div>
-                  <div>
-                    <p className="text-sm font-black text-gray-900">{o.shipping_name || 'Khách hàng'}</p>
-                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{o.status === 'pending' ? 'Chờ xác nhận' : o.status === 'delivered' ? 'Hoàn tất' : 'Đang xử lý'}</p>
-                  </div>
-                </div>
-                <p className="text-sm font-black text-red-600">+{o.total_amount.toLocaleString('vi-VN')}đ</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="bg-white p-10 rounded-[40px] shadow-xl border border-gray-100">
-          <h3 className="font-black uppercase mb-8 flex items-center gap-3 text-lg italic tracking-tight border-b pb-4"><TrendingUp className="text-green-500" /> Tăng trưởng doanh số</h3>
-          <div className="h-64 flex items-end justify-between gap-2 px-4 pb-4">
-            {[40, 70, 45, 90, 65, 80, 95].map((h, i) => (
-              <div key={i} className="flex-1 bg-red-600 rounded-t-xl relative group" style={{ height: `${h}%` }}>
-                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">T.{i+1}</div>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase tracking-widest mt-4">
-             <span>Tháng 1</span><span>Tháng 7</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -1,23 +1,5 @@
-export interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  image_url?: string;
-  parent_id?: string;
-  created_at: string;
-}
-
-export interface ProductImage {
-  id: string;
-  productId: string;
-  cloudinaryId: string;
-  url: string;
-  altText?: string;
-  isPrimary: boolean;
-  sortOrder: number;
-  createdAt: string;
-}
+import { Category } from './category';
+import { ProductImage } from './productImage';
 
 export interface Product {
   id: string;
@@ -34,7 +16,17 @@ export interface Product {
   loadIndex?: string;
   speedRating?: string;
   tireType?: 'passenger' | 'SUV' | 'truck' | 'motorcycle';
+  // Thông số kỹ thuật chi tiết
+  weight?: number;
+  warrantyPeriod?: number;
+  brand?: string;
+  origin?: string;
+  fuelEfficiency?: string;
+  wetGrip?: string;
+  noiseLevel?: number;
   aiLabel?: string;
+  rating?: number;
+  seasonType?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -42,22 +34,5 @@ export interface Product {
   images?: ProductImage[];
 }
 
-export interface ProductFilters {
-  category?: string;
-  tire_type?: string;
-  size?: string;
-  min_price?: number;
-  max_price?: number;
-  search?: string;
-  page?: number;
-  limit?: number;
-  sort?: 'price_asc' | 'price_desc' | 'newest' | 'popular';
-}
-
-export interface PaginatedProducts {
-  data: Product[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+export type { Category } from './category';
+export type { ProductImage } from './productImage';
