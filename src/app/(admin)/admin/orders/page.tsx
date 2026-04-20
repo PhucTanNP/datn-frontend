@@ -5,10 +5,13 @@ import { FileText } from 'lucide-react';
 import api from '@/lib/api';
 import type { Order } from '@/types/order';
 import Loading from '@/app/loading';
+import { NotFound } from '@/app/not-found';
+
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -17,10 +20,12 @@ export default function OrdersPage() {
   const loadOrders = async () => {
     try {
       setLoading(true);
+      setNotFound(false);
       const response = await api.get('/api/v1/admin/orders');
       setOrders(response.data.data || []);
     } catch (error) {
       console.error('Failed to load orders:', error);
+        setNotFound(true); 
     } finally {
       setLoading(false);
     }
@@ -50,6 +55,10 @@ export default function OrdersPage() {
 
   if (loading) {
     return <Loading />;
+  }
+
+  if (notFound) {
+    return <NotFound />;
   }
 
   return (

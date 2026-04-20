@@ -6,6 +6,7 @@ import { Plus, Edit, Trash2, Upload, X, Search, Info, Scale, ShieldCheck, Zap, W
 import api from '@/lib/api';
 import type { Product, Category } from '@/types/product';
 import Loading from '@/app/loading';
+import { NotFound } from '@/app/not-found';
 
 // Helper function to get primary image or fallback
 // Backend response includes images array with full ProductImage objects
@@ -88,6 +89,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
     productId: string | null;
@@ -107,6 +109,7 @@ export default function ProductsPage() {
   const loadProducts = async () => {
     try {
       setLoading(true);
+      setNotFound(false);
       const [productsRes, categoriesRes] = await Promise.all([
         api.get('/api/v1/admin/products'), // Backend tự động include images
         api.get('/api/v1/admin/categories')
@@ -115,6 +118,7 @@ export default function ProductsPage() {
       setCategories(categoriesRes.data.data || []);
     } catch (error) {
       console.error('Failed to load data:', error);
+      setNotFound(true);
     } finally {
       setLoading(false);
       console.log('Products loaded:', products)
@@ -312,6 +316,10 @@ export default function ProductsPage() {
 
   if (loading) {
     return <Loading />;
+  }
+
+  if (notFound) {
+    return <NotFound />;
   }
 
   return (

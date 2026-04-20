@@ -10,22 +10,29 @@ import { useCartStore } from '@/store/cartStore';
 import { ArrowLeft, ShoppingCart, Truck, Shield, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import Loading from '@/app/loading';
+import { NotFound } from '@/app/not-found';
+import { is404Error } from '@/lib/handle-404';
 
 export default function ProductDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   const addItem = useCartStore((state) => state.addItem);
 
   const loadProduct = useCallback(async () => {
     try {
       setLoading(true);
+      setNotFound(false);
       const response = await api.get(`/api/v1/products/${slug}`);
       setProduct(response.data.data);
     } catch (error) {
       console.error('Failed to load product:', error);
+      if (is404Error(error)) {
+        setNotFound(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -40,6 +47,10 @@ export default function ProductDetailPage() {
       addItem(product, 1);
     }
   };
+  if (notFound) {
+    return <NotFound />;
+  }
+
 
   if (loading) {
     return <Loading />;
