@@ -11,7 +11,7 @@ import { ArrowLeft, ShoppingCart, Truck, Shield, RotateCcw } from 'lucide-react'
 import Link from 'next/link';
 import Loading from '@/app/loading';
 import { NotFound } from '@/app/not-found';
-import { is404Error } from '@/lib/handle-404';
+
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -30,7 +30,7 @@ export default function ProductDetailPage() {
       setProduct(response.data.data);
     } catch (error) {
       console.error('Failed to load product:', error);
-      if (is404Error(error)) {
+      if (error.response?.status === 404) {
         setNotFound(true);
       }
     } finally {
