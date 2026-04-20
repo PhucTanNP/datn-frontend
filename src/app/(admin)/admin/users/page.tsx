@@ -5,12 +5,14 @@ import { Search, UserPlus, Mail, Phone, Edit, Trash2, X, Settings, UserCheck, Us
 import api from '@/lib/api';
 import type { User } from '@/types/auth';
 import Loading from '@/app/loading';
+import { NotFound } from '@/app/not-found';
 // import { db, doc, deleteDoc } from 'firebase/firestore';
 // import { appId } from '@/lib/firebase';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [form, setForm] = useState({ id: '', fullName: '', email: '', phone: '', role: 'customer', status: 'active', note: '' });
@@ -34,10 +36,12 @@ export default function UsersPage() {
   const loadUsers = async () => {
     try {
       setLoading(true);
+      setNotFound(false);
       const response = await api.get('/api/v1/admin/users');
       setUsers(response.data.data || []);
     } catch (error) {
       console.error('Failed to load users:', error);
+      setNotFound(true);
     } finally {
       setLoading(false);
     }
@@ -84,6 +88,10 @@ export default function UsersPage() {
 
   if (loading) {
     return <Loading />;
+  }
+
+  if (notFound) {
+    return <NotFound />;
   }
 
   return (

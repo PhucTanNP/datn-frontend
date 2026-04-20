@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import Loading from '@/app/loading';
+import { NotFound } from '@/app/not-found';
+import { is404Error } from '@/lib/handle-404';
 
 interface Order {
   id: string;
@@ -16,15 +18,25 @@ interface Order {
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    api.get('/orders/my').then((res) => {
-      setOrders(res.data.orders);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    api.get('/orders/my')
+      .then((res) => {
+        setOrders(res.data.orders);
+        setLoading(false);
+      })
+      .catch((error) => {
+        if (is404Error(error)) {
+          setNotFound(true);
+        }
+        setLoading(false);
+      });
   }, []);
 
   if (loading) return <Loading />;
+
+  if (notFound) return <NotFound />;
 
   return (
     <div className="min-h-screen py-12">

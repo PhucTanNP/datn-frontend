@@ -9,6 +9,7 @@ import { Search, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import Link from 'next/link';
 import Loading from '@/app/loading';
+import { NotFound } from '@/app/not-found';
 
 interface PaginationData {
   total: number;
@@ -24,6 +25,7 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [tireType, setTireType] = useState<string>('');
@@ -37,22 +39,15 @@ export default function ProductsPage() {
   const loadCategories = async () => {
     try {
       setError(null);
+      setNotFound(false);
       console.log('Loading categories...');
       const response = await api.get('/api/v1/categories');
       console.log('Categories response:', response.data);
       setCategories(response.data.data || []);
     } catch (error) {
       console.error('Failed to load categories:', error);
-      setError('Không thể tải danh mục sản phẩm. Vui lòng thử lại sau.');
-      // Thử endpoint khác
-      try {
-        const fallbackResponse = await api.get('/api/v1/categories');
-        console.log('Fallback categories response:', fallbackResponse.data);
-        setCategories(fallbackResponse.data.data || []);
-        setError(null);
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
-      }
+      setNotFound(true);
+      return;
     }
   };
 
@@ -60,6 +55,7 @@ export default function ProductsPage() {
     try {
       setLoading(true);
       setError(null);
+      setNotFound(false);
       console.log('Loading products with filters:', {
         currentPage, selectedCategory, tireType, size, minPrice, maxPrice, search
       });
@@ -84,24 +80,8 @@ export default function ProductsPage() {
       setPagination(response.data.pagination);
     } catch (error) {
       console.error('Failed to load products:', error);
-      setError('Không thể tải sản phẩm. Vui lòng thử lại sau.');
-      // Thử fallback endpoint
-      try {
-        const fallbackParams = new URLSearchParams({
-          page: currentPage.toString(),
-          limit: '12'
-        });
-        if (search) fallbackParams.append('search', search);
-
-        const fallbackResponse = await api.get(`/api/v1/products?${fallbackParams.toString()}`);
-        console.log('Fallback products response:', fallbackResponse.data);
-
-        setProducts(fallbackResponse.data.data || []);
-        setPagination(fallbackResponse.data.pagination);
-        setError(null);
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
-      }
+      setNotFound(true);
+      return;
     } finally {
       setLoading(false);
     }
@@ -137,6 +117,10 @@ export default function ProductsPage() {
 
   if (loading) {
     return <Loading />;
+  }
+
+  if (notFound) {
+    return <NotFound />;
   }
 
   if (error) {

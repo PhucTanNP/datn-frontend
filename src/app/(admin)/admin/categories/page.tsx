@@ -5,6 +5,7 @@ import { Plus, Edit, Trash2, Upload, X, Search } from 'lucide-react';
 import api from '@/lib/api';
 import type { Category } from '@/types/product';
 import Loading from '@/app/loading';
+import { NotFound } from '@/app/not-found';
 
 interface CategoryForm {
   id: string | null;
@@ -28,6 +29,7 @@ export default function CategoriesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
@@ -37,10 +39,12 @@ export default function CategoriesPage() {
   const loadCategories = async () => {
     try {
       setLoading(true);
+      setNotFound(false);
       const response = await api.get('/api/v1/admin/categories');
       setCategories(response.data.data || []);
     } catch (error) {
       console.error('Failed to load categories:', error);
+      setNotFound(true);
     } finally {
       setLoading(false);
     }
@@ -156,6 +160,10 @@ export default function CategoriesPage() {
 
   if (loading) {
     return <Loading />;
+  }
+
+  if (notFound) {
+    return <NotFound />;
   }
 
   return (
