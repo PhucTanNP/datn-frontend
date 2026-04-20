@@ -30,9 +30,8 @@ export default function ProductDetailPage() {
       setProduct(response.data.data);
     } catch (error) {
       console.error('Failed to load product:', error);
-      if (error.response?.status === 404) {
-        setNotFound(true);
-      }
+      setNotFound(true);
+      
     } finally {
       setLoading(false);
     }
