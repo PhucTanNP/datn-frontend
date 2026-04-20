@@ -5,7 +5,6 @@ import api from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import Loading from '@/app/loading';
 import { NotFound } from '@/app/not-found';
-import { is404Error } from '@/lib/handle-404';
 
 interface Order {
   id: string;
@@ -27,7 +26,7 @@ export default function OrdersPage() {
         setLoading(false);
       })
       .catch((error) => {
-        if (is404Error(error)) {
+        if (error.response?.status === 404) {
           setNotFound(true);
         }
         setLoading(false);
