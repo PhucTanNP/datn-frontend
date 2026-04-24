@@ -4,11 +4,15 @@ import { useCartStore } from '@/store/cartStore';
 import Link from 'next/link';
 import { ArrowRight, ChevronLeft, ShoppingCart, ShoppingBag,CreditCard,MessageCircle } from 'lucide-react';
 import { CartItem } from '@/components/cart/CartItem';
-
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/authStore';
+import { PleaseLogin } from '@/app/pleaselogin/page';
 
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, getTotal, clearCart } = useCartStore();
+  const { user } = useAuthStore();
+  const router = useRouter();
 
   // Tính toán
   const subtotal = getTotal();
@@ -145,12 +149,19 @@ export default function CartPage() {
               </div>
 
               <div className="space-y-4">
-                <Link href="/checkout">
-                  <button className="w-full bg-red-600 hover:bg-red-700 text-white py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all shadow-xl shadow-red-100 active:scale-[0.98]">
-                    Tiến hành thanh toán
-                    <ArrowRight size={20} />
-                  </button>
-                </Link>
+                <button 
+                  onClick={() => {
+                    if (user) {
+                      router.push('/checkout');
+                    } else {
+                      router.push('/pleaselogin');
+                    }
+                  }}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all shadow-xl shadow-red-100 active:scale-[0.98]"
+                >
+                  Tiến hành thanh toán
+                  <ArrowRight size={20} />
+                </button>
                 <div className="flex items-center justify-center gap-4 py-2 opacity-30 grayscale">
                   <CreditCard size={24} />
                   <span className="text-xs font-bold uppercase tracking-widest">Thanh toán an toàn</span>

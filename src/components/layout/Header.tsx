@@ -39,18 +39,28 @@ export function Header() {
           </div>
         </Link>
 
-        <div className="hidden lg:flex items-center gap-8 text-sm font-bold uppercase text-gray-700">
-          <Link href="/" className="hover:text-red-600 transition-colors relative pb-1">
-            Trang chủ
-          </Link>
-          <Link href="/products" className="hover:text-red-600 transition-colors relative pb-1">
-            Sản phẩm
-          </Link>
-          <Link href="/inspect" className="hover:text-red-600 transition-colors relative pb-1">
-            Công nghệ
-          </Link>
-          <button className="hover:text-red-600">Liên hệ</button>
-        </div>
+        <nav className="hidden lg:flex items-center gap-10">
+          {[
+            { name: 'Trang chủ', href: '/', active: pathname === '/' },
+            { name: 'Sản phẩm', href: '/products', active: pathname?.startsWith('/products') },
+            { name: 'Công nghệ', href: '/inspect', active: pathname?.startsWith('/inspect') },
+            { name: 'Liên hệ', href: '/contact', active: pathname?.startsWith('/contact') }
+          ].map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={`relative text-[13px] font-bold uppercase tracking-widest transition-all duration-300 group ${
+                item.active ? 'text-red-600' : 'text-gray-500 hover:text-red-600'
+              }`}
+            >
+              {item.name}
+              {/* Hiệu ứng gạch chân khi hover */}
+              <span className={`absolute -bottom-1 left-0 h-0.5 bg-red-600 transition-all duration-300 ${
+                item.active ? 'w-full' : 'w-0 group-hover:w-full'
+              }`}></span>
+            </Link>
+          ))}
+        </nav>
 
         <div className="flex items-center gap-4">
           {!hideCart && (
@@ -80,9 +90,11 @@ export function Header() {
               <button onClick={logout} className="p-2 text-gray-400 hover:text-red-600"><LogOut size={18} /></button>
             </div>
           ) : (
-            <Link href="/login" className="px-5 py-2.5 bg-red-600 text-white font-black rounded-xl hover:bg-red-700 transition-all text-xs uppercase tracking-widest shadow-lg shadow-red-100">
-              Đăng nhập
-            </Link>
+            !pathname.startsWith('/login') && !pathname.startsWith('/register') ? (
+              <Link href="/login" className="...">
+                Đăng nhập
+              </Link>
+            ) : null
           )}
         </div>
       </div>

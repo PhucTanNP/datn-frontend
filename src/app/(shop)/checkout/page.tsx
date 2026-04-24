@@ -1,14 +1,65 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useCartStore } from '@/store/cartStore';
 import Link from 'next/link';
-import { MapPin, ChevronLeft, User, ShoppingBag, Phone, MessageCircle, ShieldCheck, QrCode } from 'lucide-react';
+import { MapPin, ChevronLeft, User, Phone, ShieldCheck, QrCode } from 'lucide-react';
+import api from '@/lib/api';
+import type { Order } from '@/types/order';
+import {Loading} from '@/app/loading';
+import { NotFound } from '@/app/not-found';
 
 export default function CheckoutPage() {
   const { items, clearCart } = useCartStore();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
+  useEffect(() => {
+    loadOrders();
+  }, []);
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      setNotFound(false);
+      const response = await api.get('/api/v1/orders/my');
+      setOrders(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load orders:', error);
+        setNotFound(true); 
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleOrderStatusUpdate = async (orderId: string, status: string) => {
+    try {
+      await api.put(`/api/v1/orders/${orderId}`, { status });
+      await loadOrders();
+    } catch (error) {
+      console.error('Failed to update order:', error);
+      alert('Cập nhật đơn hàng thất bại. Vui lòng thử lại.');
+    }
+  };
+
+  const handleOrderDelete = async (orderId: string) => {
+    if (!confirm("Xóa đơn hàng vĩnh viễn?")) return;
+
+    try {
+      await api.delete(`/api/v1/orders/${orderId}`);
+      await loadOrders();
+    } catch (error) {
+      console.error('Failed to delete order:', error);
+      alert('Xóa đơn hàng thất bại. Vui lòng thử lại.');
+    }
+  };
   const total = items.reduce((sum, item) => sum + ((item.product?.price || 0) * item.quantity), 0);
+  if (loading) {
+    return <Loading />;
+  }
 
+  if (notFound) {
+    return <NotFound />;
+  }
   return (
        <div className="min-h-screen bg-slate-50 font-sans pb-20">
       <main className="max-w-6xl mx-auto px-6 py-10">

@@ -11,6 +11,26 @@ interface AuthState {
   initialize: () => Promise<void>;
 }
 
+// Helper to decode JWT and check expiration
+const isTokenValid = (token: string | null): boolean => {
+  if (!token) return false;
+  
+  try {
+    // JWT format: header.payload.signature
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload));
+    
+    // exp is in seconds, Date.now() is in milliseconds
+    const expirationTime = decoded.exp * 1000;
+    const currentTime = Date.now();
+    
+    // Token is valid if expiration time is in the future
+    return expirationTime > currentTime;
+  } catch {
+    return false;
+  }
+};
+
 // Helper function to get initial state from localStorage
 const getInitialState = () => {
   if (typeof window === 'undefined') return { user: null, accessToken: null };
@@ -21,8 +41,13 @@ const getInitialState = () => {
   // If no tokens, return null
   if (!accessToken || !refreshToken) return { user: null, accessToken: null };
 
-  // TODO: Validate token expiration here if needed
-  // For now, assume tokens are valid if present
+  // Validate token expiration
+  if (!isTokenValid(accessToken)) {
+    // Clear invalid tokens
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    return { user: null, accessToken: null };
+  }
 
   return { user: null, accessToken }; // User will be fetched separately if needed
 };
