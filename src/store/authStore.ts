@@ -31,25 +31,17 @@ const isTokenValid = (token: string | null): boolean => {
   }
 };
 
-// Helper function to get initial state from localStorage
+
+
 const getInitialState = () => {
   if (typeof window === 'undefined') return { user: null, accessToken: null };
 
   const accessToken = localStorage.getItem('accessToken');
   const refreshToken = localStorage.getItem('refreshToken');
 
-  // If no tokens, return null
   if (!accessToken || !refreshToken) return { user: null, accessToken: null };
 
-  // Validate token expiration
-  if (!isTokenValid(accessToken)) {
-    // Clear invalid tokens
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    return { user: null, accessToken: null };
-  }
-
-  return { user: null, accessToken }; // User will be fetched separately if needed
+  return { user: null, accessToken };
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -69,15 +61,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const state = getInitialState();
     set(state);
 
-    // If we have accessToken, try to fetch user info
+    // If we have accessToken, try to fetch user info.
+    // The `api` instance will attempt refresh automatically when needed.
     if (state.accessToken) {
       try {
         const response = await api.get('/api/v1/auth/profile');
-        const user = response.data.data;
+        const user = response.data?.data || response.data;
         set({ user });
       } catch (error) {
-        // If token invalid, logout
-        console.error('Failed to fetch user:', error);
+        // If fetching user failed (including refresh failure), logout
+        console.error('Failed to fetch user during initialize:', error);
         get().logout();
       }
     }

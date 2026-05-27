@@ -11,177 +11,282 @@ import { NotFound } from '@/app/not-found';
 
 export default function CheckoutPage() {
   const { items, clearCart } = useCartStore();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [orderCreated, setOrderCreated] = useState<Order | null>(null);
+  const [paymentImage, setPaymentImage] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedProof, setUploadedProof] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  
+  const [form, setForm] = useState({
+    shippingName: '',
+    shippingPhone: '',
+    shippingAddress: '',
+    notes: ''
+  });
 
-  useEffect(() => {
-    loadOrders();
-  }, []);
-  const loadOrders = async () => {
+  const total = items.reduce((sum, item) => sum + ((item.product?.price || 0) * item.quantity), 0);
+  const shippingFee = total >= 500000 ? 0 : 30000;
+  const grandTotal = total + shippingFee;
+
+  const handleCreateOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (items.length === 0) return;
+    
     try {
       setLoading(true);
-      setNotFound(false);
-      const response = await api.get('/api/v1/orders/my');
-      setOrders(response.data.data || []);
+      const response = await api.post('/api/v1/orders', {
+        items: items.map(item => ({ productId: item.product_id, quantity: item.quantity })),
+        ...form
+      });
+      setOrderCreated(response.data.data);
+      clearCart();
     } catch (error) {
-      console.error('Failed to load orders:', error);
-        setNotFound(true); 
+      console.error('Failed to create order:', error);
+      alert('Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
   };
-  const handleOrderStatusUpdate = async (orderId: string, status: string) => {
-    try {
-      await api.put(`/api/v1/orders/${orderId}`, { status });
-      await loadOrders();
-    } catch (error) {
-      console.error('Failed to update order:', error);
-      alert('Cập nhật đơn hàng thất bại. Vui lòng thử lại.');
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (!file) return;
+    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError('Chỉ hỗ trợ JPG, PNG hoặc PDF');
+      return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('File không quá 5MB');
+      return;
+    }
+    setPaymentImage(file);
+    setUploadError(null);
   };
 
-  const handleOrderDelete = async (orderId: string) => {
-    if (!confirm("Xóa đơn hàng vĩnh viễn?")) return;
+  useEffect(() => {
+    // Auto-upload when order exists and a file is selected
+    const doUpload = async () => {
+      if (!orderCreated || !paymentImage) return;
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('image', paymentImage);
 
-    try {
-      await api.delete(`/api/v1/orders/${orderId}`);
-      await loadOrders();
-    } catch (error) {
-      console.error('Failed to delete order:', error);
-      alert('Xóa đơn hàng thất bại. Vui lòng thử lại.');
-    }
-  };
-  const total = items.reduce((sum, item) => sum + ((item.product?.price || 0) * item.quantity), 0);
-  if (loading) {
-    return <Loading />;
-  }
+        const res = await api.post(`/api/v1/orders/${orderCreated.id}/payment-proof`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
 
-  if (notFound) {
-    return <NotFound />;
-  }
+        setUploadedProof(res.data?.data || res.data?.proofUrl || null);
+        // redirect to orders page after successful upload
+        window.location.href = '/orders';
+      } catch (err) {
+        console.error('Upload failed:', err);
+        setUploadError('Không thể tải ảnh lên. Vui lòng thử lại.');
+      } finally {
+        setUploading(false);
+      }
+    };
+
+    doUpload();
+  }, [orderCreated, paymentImage]);
+
+  
+
+  if (loading) return <Loading />;
+
   return (
-       <div className="min-h-screen bg-slate-50 font-sans pb-20">
+       <div className="min-h-screen bg-slate-50 font-sans pb-20 italic">
       <main className="max-w-6xl mx-auto px-6 py-10">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-black text-gray-900">Thanh toán đơn hàng</h1>
-          <Link href="/cart">
-            <button className="text-gray-500 hover:text-red-600 flex items-center gap-2 text-sm font-bold transition">
-              <ChevronLeft size={18} /> Quay lại giỏ hàng
-            </button>
-          </Link>
+          <h1 className="text-3xl font-black text-gray-900 uppercase italic">Thanh toán đơn hàng</h1>
+          {!orderCreated && (
+            <Link href="/cart">
+              <button className="text-gray-500 hover:text-red-600 flex items-center gap-2 text-sm font-bold transition">
+                <ChevronLeft size={18} /> Quay lại giỏ hàng
+              </button>
+            </Link>
+          )}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* CỘT TRÁI: THÔNG TIN GIAO HÀNG */}
-          <div className="lg:col-span-7 space-y-6">
-            <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-6 text-red-600">
-                <MapPin size={24} strokeWidth={2.5} />
-                <h2 className="text-xl font-bold text-gray-900">Thông tin giao hàng</h2>
-              </div>
 
-              <div className="space-y-4">
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    type="text" 
-                    placeholder="Họ và tên đầy đủ"
-                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-red-500 focus:bg-white outline-none transition"
-                  />
+        {!orderCreated ? (
+          <form onSubmit={handleCreateOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* CỘT TRÁI: THÔNG TIN GIAO HÀNG */}
+            <div className="lg:col-span-7 space-y-6">
+              <section className="bg-white rounded-[40px] p-10 shadow-xl border border-gray-100">
+                <div className="flex items-center gap-3 mb-8 text-red-600">
+                  <MapPin size={24} strokeWidth={2.5} />
+                  <h2 className="text-2xl font-black text-gray-900 uppercase italic">Thông tin nhận hàng</h2>
                 </div>
 
-                <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    type="tel" 
-                    placeholder="Số điện thoại liên lạc"
-                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-red-500 focus:bg-white outline-none transition"
-                  />
-                </div>
+                <div className="space-y-6">
+                  <div className="relative">
+                    <User className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={20} />
+                    <input 
+                      required
+                      type="text" 
+                      placeholder="Họ và tên đầy đủ"
+                      value={form.shippingName}
+                      onChange={e => setForm({...form, shippingName: e.target.value})}
+                      className="w-full pl-16 pr-6 py-5 bg-gray-50 border-2 border-transparent rounded-3xl focus:ring-4 focus:ring-red-100 focus:bg-white focus:border-red-600 outline-none transition font-bold"
+                    />
+                  </div>
 
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-6 text-gray-400" size={18} />
+                  <div className="relative">
+                    <Phone className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={20} />
+                    <input 
+                      required
+                      type="tel" 
+                      placeholder="Số điện thoại liên lạc"
+                      value={form.shippingPhone}
+                      onChange={e => setForm({...form, shippingPhone: e.target.value})}
+                      className="w-full pl-16 pr-6 py-5 bg-gray-50 border-2 border-transparent rounded-3xl focus:ring-4 focus:ring-red-100 focus:bg-white focus:border-red-600 outline-none transition font-bold"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <MapPin className="absolute left-6 top-7 text-gray-300" size={20} />
+                    <textarea 
+                      required
+                      placeholder="Địa chỉ giao hàng chi tiết..."
+                      rows={3}
+                      value={form.shippingAddress}
+                      onChange={e => setForm({...form, shippingAddress: e.target.value})}
+                      className="w-full pl-16 pr-6 py-5 bg-gray-50 border-2 border-transparent rounded-3xl focus:ring-4 focus:ring-red-100 focus:bg-white focus:border-red-600 outline-none transition font-bold resize-none"
+                    ></textarea>
+                  </div>
+
                   <textarea 
-                    placeholder="Địa chỉ giao hàng chi tiết (Số nhà, đường, phường/xã...)"
-                    rows={3}
-                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-red-500 focus:bg-white outline-none transition resize-none"
+                    placeholder="Ghi chú thêm về đơn hàng (Không bắt buộc)"
+                    rows={2}
+                    value={form.notes}
+                    onChange={e => setForm({...form, notes: e.target.value})}
+                    className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-3xl focus:ring-4 focus:ring-red-100 focus:bg-white focus:border-red-600 outline-none transition font-bold resize-none"
                   ></textarea>
                 </div>
+              </section>
 
-                <textarea 
-                  placeholder="Ghi chú thêm về đơn hàng (Không bắt buộc)"
-                  className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-red-500 focus:bg-white outline-none transition resize-none"
-                ></textarea>
+              <div className="p-6 bg-green-50 rounded-3xl border border-green-100 text-green-700 text-sm font-bold flex items-center gap-4">
+                <ShieldCheck size={24} />
+                <p>Thanh toán an toàn & Bảo mật 100% dữ liệu khách hàng.</p>
               </div>
-            </section>
-
-            {/* Thông tin bảo mật */}
-            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-2xl border border-green-100 text-green-700 text-sm">
-              <ShieldCheck size={20} />
-              <p>Mọi thông tin cá nhân của bạn đều được DRC cam kết bảo mật tuyệt đối.</p>
             </div>
-          </div>
 
-          {/* CỘT PHẢI: TÓM TẮT & THANH TOÁN QR */}
-          <div className="lg:col-span-5 space-y-6">
-            
-            {/* Tóm tắt đơn hàng */}
-            <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Đơn hàng của bạn</h2>
-              <div className="space-y-4 mb-6">
-                {items.map((item) => (
-                  <div key={item.product_id} className="flex justify-between items-center text-sm">
-                    <div className="flex gap-2">
-                      <span className="text-gray-900 font-semibold">{item.product?.name || 'Sản phẩm'}</span>
-                      <span className="text-gray-400 font-medium">x{item.quantity}</span>
+            {/* CỘT PHẢI: TÓM TẮT */}
+            <div className="lg:col-span-5">
+              <section className="bg-white rounded-[40px] p-10 shadow-xl border border-gray-100 sticky top-10">
+                <h2 className="text-xl font-black text-gray-900 mb-8 uppercase italic border-b pb-4">Tóm tắt đơn hàng</h2>
+                <div className="space-y-5 mb-8">
+                  {items.map((item) => (
+                    <div key={item.product_id} className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl">
+                      <div className="flex flex-col">
+                        <span className="text-gray-900 font-black uppercase text-xs tracking-tight">{item.product?.name}</span>
+                        <span className="text-red-600 font-bold text-[10px]">SỐ LƯỢNG: {item.quantity}</span>
+                      </div>
+                      <span className="text-gray-900 font-black">{((item.product?.price || 0) * item.quantity).toLocaleString()}đ</span>
                     </div>
-                    <span className="text-gray-900 font-bold">{((item.product?.price || 0) * item.quantity).toLocaleString()}đ</span>
+                  ))}
+                </div>
+                
+                <div className="space-y-3 border-t pt-6 mb-8">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400 font-bold uppercase text-[10px]">Tạm tính:</span>
+                    <span className="text-gray-900 font-black">{total.toLocaleString()}đ</span>
                   </div>
-                ))}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400 font-bold uppercase text-[10px]">Phí vận chuyển:</span>
+                    <span className="text-gray-900 font-black">{shippingFee === 0 ? 'MIỄN PHÍ' : shippingFee.toLocaleString() + 'đ'}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-4 border-t border-dashed">
+                    <span className="text-gray-900 font-black uppercase italic tracking-tighter">Tổng cộng:</span>
+                    <span className="text-4xl font-black text-red-600 tracking-tighter italic">{grandTotal.toLocaleString()}đ</span>
+                  </div>
+                </div>
+
+                {/* QR image + upload (visible before order creation) */}
+                <div className="my-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  {process.env.NEXT_PUBLIC_PAYMENT_QR_IMAGE_URL ? (
+                    <div className="mb-4">
+                      <img src={process.env.NEXT_PUBLIC_PAYMENT_QR_IMAGE_URL} alt="VietQR" className="w-40 mx-auto object-contain" />
+                      <p className="text-center text-sm text-gray-500 mt-2">Quét mã để thanh toán hoặc tải ảnh biên lai lên</p>
+                    </div>
+                  ) : (
+                    <div className="mb-4 text-center text-red-700 font-bold">Có lỗi với mã QR. Vui lòng liên hệ đại lý để được hỗ trợ.</div>
+                  )}
+
+                  <label className="block text-xs font-bold mb-2">Tải lên ảnh bằng chứng thanh toán (JPG/PNG/PDF, ≤5MB)</label>
+                  <input type="file" accept="image/jpeg,image/png,application/pdf" onChange={handleFileSelect} className="w-full mb-2" />
+                  {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
+                  {paymentImage && <p className="text-sm text-gray-700 mb-2">Chọn: {paymentImage.name}</p>}
+                  {uploading && <p className="text-sm text-gray-500">Đang tải lên...</p>}
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-gray-900 hover:bg-black text-white py-6 rounded-3xl font-black text-lg flex items-center justify-center gap-3 transition shadow-2xl active:scale-[0.98] uppercase tracking-widest italic"
+                >
+                  Xác nhận đặt hàng
+                </button>
+              </section>
+            </div>
+          </form>
+        ) : (
+          <div className="max-w-2xl mx-auto">
+            <section className="bg-white rounded-[50px] p-12 shadow-2xl border border-gray-100 text-center space-y-8">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-green-50 text-green-500 rounded-full mb-4">
+                <ShieldCheck size={40} />
               </div>
-              
-              <div className="border-t border-gray-50 pt-4 mb-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500 font-medium">Tổng tiền cần trả:</span>
-                  <span className="text-2xl font-black text-red-600">{total.toLocaleString()}đ</span>
+              <div>
+                <h2 className="text-3xl font-black text-gray-900 uppercase italic tracking-tight">Đã khởi tạo đơn hàng!</h2>
+                <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mt-2">Mã đơn: #{orderCreated.order_number}</p>
+              </div>
+
+              {/* KHU VỰC QR THANH TOÁN */}
+              <div className="bg-gray-50 rounded-[40px] p-8 border-2 border-dashed border-red-200">
+                <h3 className="font-black text-gray-900 uppercase italic mb-2">Quét mã chuyển khoản</h3>
+                <p className="text-xs text-gray-400 mb-8 font-bold">Vui lòng chuyển đúng số tiền và nội dung để được duyệt nhanh nhất.</p>
+                
+                <div className="flex flex-col md:flex-row items-center justify-center gap-10">
+                  <div className="w-56 h-56">
+                    {process.env.NEXT_PUBLIC_PAYMENT_QR_IMAGE_URL ? (
+                      <div className="w-full h-full bg-white rounded-3xl p-4 shadow-xl border border-gray-100 relative group overflow-hidden">
+                        <img
+                          src={process.env.NEXT_PUBLIC_PAYMENT_QR_IMAGE_URL}
+                          alt="VietQR"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-full h-full bg-white rounded-3xl border-2 border-gray-200 flex items-center justify-center text-red-700 p-4 text-center">
+                        <p className="font-bold">Có lỗi với mã QR. Vui lòng liên hệ đại lý để được hỗ trợ.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-left space-y-4">
+                    <div className="bg-white p-4 rounded-2xl border border-gray-100 min-w-48 shadow-sm">
+                      <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Số tiền</p>
+                      <p className="text-xl font-black text-red-600 italic">{grandTotal.toLocaleString()}đ</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-2xl border border-gray-100 min-w-48 shadow-sm">
+                      <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Nội dung</p>
+                      <p className="text-sm font-black text-gray-900 italic">DRC {orderCreated.order_number}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* KHU VỰC DÁN QR THANH TOÁN (THEO YÊU CẦU) */}
-              <div className="bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 p-6 flex flex-col items-center text-center">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 text-red-600">
-                  <QrCode size={24} />
-                </div>
-                <h3 className="font-bold text-gray-900 mb-2">Thanh toán QR nhanh</h3>
-                <p className="text-xs text-gray-500 mb-6 px-4">Quét mã bằng ứng dụng Ngân hàng hoặc Ví điện tử để thanh toán ngay.</p>
-                
-                {/* DÁN MÃ QR CỦA BẠN VÀO ĐÂY */}
-                <div className="w-48 h-48 bg-white rounded-2xl border border-gray-100 flex items-center justify-center p-2 relative group overflow-hidden shadow-sm">
-                   {/* Placeholder cho ảnh QR thực tế */}
-                   <div className="w-full h-full bg-gray-50 rounded-xl flex items-center justify-center text-gray-300 italic text-xs p-4">
-                     [Dán hình ảnh mã QR của bạn tại đây]
-                   </div>
-                   
-                   {/* Overlay trang trí */}
-                   <div className="absolute inset-0 border-2 border-red-500/20 rounded-2xl pointer-events-none"></div>
-                </div>
-                
-                <p className="mt-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nội dung: CK DRC [SĐT của bạn]</p>
+              {/* UPLOAD BIÊN LAI */}
+              <div className="mt-6">
+                <Link href="/">
+                  <button className="w-full py-4 bg-white text-gray-900 border border-gray-200 rounded-3xl font-black hover:bg-gray-50 transition">Trở về trang sản phẩm</button>
+                </Link>
               </div>
 
-              <button
-                onClick={() => {
-                  alert('Thanh toán thành công! Giỏ hàng sẽ được xóa.');
-                  clearCart();
-                }}
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-5 rounded-2xl font-bold text-lg mt-8 flex items-center justify-center gap-3 transition shadow-xl shadow-red-200 active:scale-[0.98]"
-              >
-                Xác nhận đã chuyển khoản
-              </button>
             </section>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );

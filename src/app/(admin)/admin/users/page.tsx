@@ -15,7 +15,7 @@ export default function UsersPage() {
   const [notFound, setNotFound] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [form, setForm] = useState({ id: '', fullName: '', email: '', phone: '', role: 'customer', status: 'active', note: '' });
+  const [form, setForm] = useState({ id: '', fullName: '', email: '', phone: '', role: 'customer', status: 'active', note: '', password: '' });
   const [modal, setModal] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const ROLES = [
@@ -55,6 +55,7 @@ export default function UsersPage() {
       phone: user.phone || '',
       role: user.role || 'customer',
       status: user.status || (user.is_active ? 'active' : 'inactive'),
+      password: '',
       note: user.note || ''
     });
     setIsPanelOpen(true);
@@ -62,7 +63,7 @@ export default function UsersPage() {
 
   const handleClosePanel = () => {
     setIsPanelOpen(false);
-    setForm({ id: '', fullName: '', email: '', phone: '', role: 'customer', status: 'active', note: '' });
+    setForm({ id: '', fullName: '', email: '', phone: '', role: 'customer', status: 'active', note: '', password: '' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,14 +75,19 @@ export default function UsersPage() {
         setModal({ type: 'success', message: 'Cập nhật thành công!' });
       } else {
         // Create user
+        if (!form.password) {
+          setModal({ type: 'error', message: 'Cần nhập mật khẩu cho tài khoản mới!' });
+          return;
+        }
         await api.post('/api/v1/admin/users', form);
         setModal({ type: 'success', message: 'Tạo mới thành công!' });
       }
       loadUsers();
       handleClosePanel();
       setTimeout(() => setModal(null), 3000);
-    } catch {
-      setModal({ type: 'error', message: 'Có lỗi xảy ra!' });
+    } catch (error: unknown) {
+      const msg = (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra!';
+      setModal({ type: 'error', message: msg });
       setTimeout(() => setModal(null), 3000);
     }
   };
@@ -221,6 +227,12 @@ export default function UsersPage() {
             </div>
 
             <div className="space-y-8">
+              {!form.id && (
+                <div className="space-y-3">
+                  <label className="text-[11px] font-black uppercase text-gray-300 ml-8 tracking-widest italic">Mật khẩu</label>
+                  <input required type="password" placeholder="••••••••" className="w-full p-5 bg-gray-50 rounded-[25px] outline-none focus:ring-4 focus:ring-red-100 font-bold italic text-xs shadow-inner" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+                </div>
+              )}
               <div className="space-y-3">
                 <label className="text-[11px] font-black uppercase text-gray-300 ml-8 tracking-widest italic">Địa chỉ Email</label>
                 <input required type="email" placeholder="example@gmail.com" className="w-full p-5 bg-gray-50 rounded-[25px] outline-none focus:ring-4 focus:ring-red-100 font-bold italic text-xs shadow-inner" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
@@ -228,6 +240,10 @@ export default function UsersPage() {
               <div className="space-y-3">
                 <label className="text-[11px] font-black uppercase text-gray-300 ml-8 tracking-widest italic">Số điện thoại liên lạc</label>
                 <input type="tel" placeholder="09xx xxx xxx" className="w-full p-5 bg-gray-50 rounded-[25px] outline-none focus:ring-4 focus:ring-red-100 font-bold italic text-xs shadow-inner" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[11px] font-black uppercase text-gray-300 ml-8 tracking-widest italic">Ghi chú admin</label>
+                <textarea placeholder="Ghi chú về khách hàng..." className="w-full p-5 bg-gray-50 rounded-[25px] outline-none focus:ring-4 focus:ring-red-100 font-bold italic text-xs shadow-inner resize-none" rows={3} value={form.note} onChange={e => setForm({...form, note: e.target.value})} />
               </div>
             </div>
 

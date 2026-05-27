@@ -2,7 +2,8 @@ import { Product } from './product';
 
 export type OrderStatus =
   | 'pending'
-  | 'confirmed'
+  | 'awaiting_payment'
+  | 'paid_confirmed'
   | 'processing'
   | 'shipped'
   | 'delivered'
@@ -16,8 +17,13 @@ export interface OrderItem {
   quantity: number;
   unit_price: number;
   total_price: number;
-  snapshot?: Record<string, unknown>;
-  product?: Product;
+  snapshot: OrderItemSnapshot;
+}
+
+export interface OrderItemSnapshot {
+  sku: string;
+  name: string;
+  image: string;
 }
 
 export interface Order {
@@ -33,6 +39,12 @@ export interface Order {
   shipping_phone: string;
   shipping_address: string;
   notes?: string;
+  // Payment fields
+  payment_phone?: string;
+  payment_proof_url?: string;
+  payment_confirmed_at?: string;
+  payment_confirmed_by?: string;
+
   created_at: string;
   updated_at: string;
   items?: OrderItem[];
