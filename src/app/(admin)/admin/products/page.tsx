@@ -1,89 +1,34 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import { Plus, Edit, Trash2, Upload, X, Search, Info, Scale, ShieldCheck, Zap, Wind, Volume2, Tag, LinkIcon, Database, Star, Check } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, X, Search, Info, Scale, Zap, Wind, Tag, Database } from 'lucide-react';
 import api from '@/lib/api';
 import type { Product, Category } from '@/types/product';
+import type { ProductImage } from '@/types/productImage';
 import Loading from '@/app/loading';
 import { NotFound } from '@/app/not-found';
+import { uploadImage, createPreviewUrl, revokePreviewUrl } from '@/lib/cloudinary';
 
-// Helper function to get primary image or fallback
-// Backend response includes images array with full ProductImage objects
-const getProductImage = (product: Product): string => {
-  return product.images?.find(img => img.isPrimary)?.url ||
-         product.images?.[0]?.url ||
-         '/placeholder.png';
+const generateSlug = (text: string) => {
+  return text
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // bỏ dấu
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 };
 
-const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_UPLOAD_PRESET = 'drc_tires'; // You may need to create this preset in Cloudinary
-
-const GRADES = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-const SEASONS = [
-  { value: 'all-season', label: 'Bốn mùa' },
-  { value: 'summer', label: 'Mùa hè' },
-  { value: 'winter', label: 'Mùa đông' }
-];
-
-interface ProductForm {
-  id: string | null;
-  name: string;
-  sku: string;
-  slug: string;
-  price: string;
-  category_id: string;
-  image: string;
-  cloudinary_id: string;
-  description: string;
-}
-
-interface TechnicalSpecsForm {
-  size: string;
-  rimDiameter: string;
-  loadIndex: string;
-  speedRating: string;
-  tireType: string;
-  weight: string;
-  warrantyPeriod: string;
-  brand: string;
-  origin: string;
-  fuelEfficiency: string;
-  wetGrip: string;
-  noiseLevel: string;
-  rating: string;
-  seasonType: string;
-}
+const emptyProduct: Product = {
+  id: '', categoryId: '', sku: '', name: '', slug: '', description: '',
+  price: 0, salePrice: 0, stockQuantity: 0,
+  size: '', rimDiameter: undefined as unknown as number,
+  loadIndex: '', speedRating: '',
+  isActive: true, createdAt: '', updatedAt: '',
+};
 
 export default function ProductsPage() {
-  const [itemForm, setItemForm] = useState<ProductForm>({
-    id: null,
-    name: '',
-    sku: '',
-    slug: '',
-    price: '',
-    category_id: '',
-    image: '',
-    cloudinary_id: '',
-    description: ''
-  });
-
-  const [techSpecsForm, setTechSpecsForm] = useState<TechnicalSpecsForm>({
-    size: '',
-    rimDiameter: '',
-    loadIndex: '',
-    speedRating: '',
-    tireType: '',
-    weight: '',
-    warrantyPeriod: '',
-    brand: '',
-    origin: '',
-    fuelEfficiency: '',
-    wetGrip: '',
-    noiseLevel: '',
-    rating: '',
-    seasonType: ''
-  });
+  const [itemForm, setItemForm] = useState<Product>(emptyProduct);
   const [isUploading, setIsUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -101,6 +46,7 @@ export default function ProductsPage() {
   });
   const [deleting, setDeleting] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [imageChanged, setImageChanged] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -129,48 +75,31 @@ export default function ProductsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Instant local preview
-    const previewUrl = URL.createObjectURL(file);
-    setItemForm(prev => ({ ...prev, image: previewUrl }));
+    // Hiển thị preview local ngay lập tức
+    const previewUrl = createPreviewUrl(file);
+    setItemForm(prev => ({ ...prev, images: { url: previewUrl } as ProductImage }));
     setIsUploading(true);
 
-    // Async upload to Cloudinary
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
     try {
-      if (!CLOUDINARY_CLOUD_NAME) {
-        throw new Error('Missing NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME in .env.local');
-      }
+      // Upload lên Cloudinary qua module đã tách
+      const result = await uploadImage(file);
 
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method: 'POST',
-        body: formData
-      });
+      setItemForm(prev => ({
+        ...prev,
+        images: {
+          url: result.url,
+          cloudinaryId: result.cloudinaryId,
+          isPrimary: true,
+          sortOrder: 0,
+        } as ProductImage,
+      }));
+      setImageChanged(true);
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      }
-
-      const data = await res.json();
-      console.log('Cloudinary response:', data);
-
-      if (data.secure_url && data.public_id) {
-        const optimizedUrl = data.secure_url.replace('/upload/', '/upload/f_auto,q_auto,w_800/');
-        setItemForm(prev => ({
-          ...prev,
-          image: optimizedUrl,
-          cloudinary_id: data.public_id
-        }));
-        URL.revokeObjectURL(previewUrl); // Cleanup local preview
-      } else {
-        throw new Error('Upload failed: Missing secure_url or public_id in response.');
-      }
+      revokePreviewUrl(previewUrl); // Giải phóng bộ nhớ preview local
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error('Upload failed:', err);
-      alert(`Upload thất bại: ${message}\nCheck Console/Network tab.`);
+      alert(`Upload thất bại: ${message}\nKiểm tra Console/Network tab.`);
     } finally {
       setIsUploading(false);
     }
@@ -178,110 +107,53 @@ export default function ProductsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!itemForm.image) {
-      alert("Vui lòng tải ảnh lên!");
-      return;
-    }
 
     try {
-      const productData = {
+      const productData: Record<string, unknown> = {
         name: itemForm.name,
         sku: itemForm.sku,
         slug: itemForm.slug,
+        stockQuantity: itemForm.stockQuantity || 0,
         price: Number(itemForm.price),
-        category_id: itemForm.category_id,
-        image: itemForm.image,
-        cloudinary_id: itemForm.cloudinary_id,
-        description: itemForm.description,
-        is_active: true,
-        // Technical specifications
-        size: techSpecsForm.size || null,
-        rim_diameter: techSpecsForm.rimDiameter ? Number(techSpecsForm.rimDiameter) : null,
-        load_index: techSpecsForm.loadIndex || null,
-        speed_rating: techSpecsForm.speedRating || null,
-        tire_type: techSpecsForm.tireType || null,
-        weight: techSpecsForm.weight ? Number(techSpecsForm.weight) : null,
-        warranty_period: techSpecsForm.warrantyPeriod ? Number(techSpecsForm.warrantyPeriod) : null,
-        brand: techSpecsForm.brand || null,
-        origin: techSpecsForm.origin || null,
-        fuel_efficiency: techSpecsForm.fuelEfficiency || null,
-        wet_grip: techSpecsForm.wetGrip || null,
-        noise_level: techSpecsForm.noiseLevel ? Number(techSpecsForm.noiseLevel) : null,
-        rating: techSpecsForm.rating ? Number(techSpecsForm.rating) : null
+        categoryId: itemForm.categoryId|| undefined,
+        description: itemForm.description || undefined,
+        size: itemForm.size || undefined,
+        rimDiameter: itemForm.rimDiameter ? Number(itemForm.rimDiameter) : undefined,
+        loadIndex: itemForm.loadIndex || undefined,
+        speedRating: itemForm.speedRating || undefined,
       };
 
+      // Chỉ gửi ảnh khi user thực sự upload ảnh mới
+      if (imageChanged) {
+        productData.image = itemForm.images?.url || undefined;
+        productData.cloudinary_id = itemForm.images?.cloudinaryId || undefined;
+      }
+
+      console.log('🚀 Submitting productData:', {
+        ...productData,
+        imageChanged,
+        hasImage: !!productData.image,
+        hasCloudinaryId: !!productData.cloudinary_id,
+      });
+
       if (itemForm.id) {
-        // Update product
         await api.put(`/api/v1/admin/products/${itemForm.id}`, productData);
       } else {
-        // Create product
         await api.post('/api/v1/admin/products', productData);
       }
 
-      // Reset form and reload data
-      setItemForm({
-        id: null,
-        name: '',
-        sku: '',
-        slug: '',
-        price: '',
-        category_id: '',
-        image: '',
-        cloudinary_id: '',
-        description: ''
-      });
-      setTechSpecsForm({
-        size: '',
-        rimDiameter: '',
-        loadIndex: '',
-        speedRating: '',
-        tireType: '',
-        weight: '',
-        warrantyPeriod: '',
-        brand: '',
-        origin: '',
-        fuelEfficiency: '',
-        wetGrip: '',
-        noiseLevel: '',
-        rating: '',
-        seasonType: ''
-      });
+      setImageChanged(false);
+      setItemForm(emptyProduct);
       setIsFormOpen(false);
       await loadProducts();
     } catch (error) {
       console.error('Failed to save product:', error);
-      alert('Lưu sản phẩm thất bại. Vui lòng thử lại.');
     }
   };
 
   const handleEdit = (product: Product) => {
-    setItemForm({
-      id: product.id,
-      name: product.name,
-      sku: product.sku,
-      slug: product.slug,
-      price: product.price.toString(),
-      category_id: product.category?.id || '',
-      image: getProductImage(product),
-      cloudinary_id: product.images?.find(img => img.isPrimary)?.cloudinaryId || product.images?.[0]?.cloudinaryId || '',
-      description: product.description || ''
-    });
-    setTechSpecsForm({
-      size: product.size || '',
-      rimDiameter: product.rimDiameter?.toString() || '',
-      loadIndex: product.loadIndex || '',
-      speedRating: product.speedRating || '',
-      tireType: product.tireType || '',
-      weight: product.weight?.toString() || '',
-      warrantyPeriod: product.warrantyPeriod?.toString() || '',
-      brand: product.brand || '',
-      origin: product.origin || '',
-      fuelEfficiency: product.fuelEfficiency || '',
-      wetGrip: product.wetGrip || '',
-      noiseLevel: product.noiseLevel?.toString() || '',
-      rating: product.rating?.toString() || '',
-      seasonType: product.seasonType || ''
-    });
+    setImageChanged(false);
+    setItemForm({ ...product });
     setIsFormOpen(true);
   };
 
@@ -298,13 +170,15 @@ export default function ProductsPage() {
 
     setDeleting(true);
     try {
-      await api.delete(`/api/v1/admin/products/${deleteModal.productId}`);
+      const res = await api.delete(`/api/v1/admin/products/${deleteModal.productId}`);
+      console.log('Delete response:', res.data);
       await loadProducts();
       setDeleteModal({ isOpen: false, productId: null, productName: '' });
     } catch (error) {
       console.error('Failed to delete product:', error);
-      // Có thể thêm toast notification thay vì alert
-      alert('Xóa sản phẩm thất bại. Vui lòng thử lại.');
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const msg = axiosError?.response?.data?.message || (error instanceof Error ? error.message : 'Vui lòng thử lại.');
+      alert(`Xóa sản phẩm thất bại: ${msg}`);
     } finally {
       setDeleting(false);
     }
@@ -345,7 +219,7 @@ export default function ProductsPage() {
             />
           </div>
           <button
-            onClick={() => setIsFormOpen(true)}
+            onClick={() => { setImageChanged(false); setItemForm({...emptyProduct, categoryId: categories[0]?.id || ''}); setIsFormOpen(true); }}
             className="flex items-center gap-3 px-8 py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-100 active:scale-95 whitespace-nowrap"
           >
             <Plus size={20} /> Thêm lốp mới
@@ -374,12 +248,16 @@ export default function ProductsPage() {
                   <td className="p-8">
                     <div className="flex items-center gap-6">
                       <div className="w-24 h-24 bg-white rounded-3xl p-2 border border-gray-100 group-hover:scale-110 transition-transform shadow-sm flex items-center justify-center shrink-0">
-                        <img src={getProductImage(p)} className="max-w-full max-h-full object-contain" alt="tire" />
+                      {p.images?.url ? (
+                        <img src={p.images.url} className="max-w-full max-h-full object-contain" alt="tire" />
+                      ) : (
+                        <div className="text-gray-300"><Upload size={24} /></div>
+                      )}
                       </div>
                       <div>
                         <span className="font-black text-base text-gray-900 block uppercase italic group-hover:text-red-600 transition-colors leading-tight mb-2">{p.name}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black uppercase text-gray-400 bg-gray-100 px-3 py-1 rounded-full">{p.sku || 'K-001'}</span>
+                          <span className="text-[10px] font-black uppercase text-gray-700 bg-gray-100 px-3 py-1 rounded-full">số lượng {p.stockQuantity || 'K-001'}</span>
                           <span className="text-[10px] font-black uppercase text-red-600 border border-red-100 px-3 py-1 rounded-full tracking-widest">{p.category?.name || 'Chưa phân loại'}</span>
                         </div>
                       </div>
@@ -388,27 +266,26 @@ export default function ProductsPage() {
                   <td className="p-8">
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-4 text-[10px] font-bold text-gray-500 uppercase italic">
-                        <span className="flex items-center gap-1"><Scale size={14} className="text-gray-300"/> {p.weight || 0}kg</span>
-                        <span className="flex items-center gap-1"><ShieldCheck size={14} className="text-gray-300"/> {p.warrantyPeriod || 0}th</span>
+                        <span className="flex items-center gap-1"><Scale size={14} className="text-gray-300"/> {p.size || '-'}</span>
                       </div>
-                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">
-                        Hãng: {p.brand || 'DRC'} • Gốc: {p.origin || 'Việt Nam'}
+                      <div className="text-[10px] font-black text-gray-700 uppercase tracking-tighter">
+                        Mã SKU: {p.sku || '-'}
                       </div>
                     </div>
                   </td>
                   <td className="p-8">
                     <div className="flex flex-col items-center gap-2">
                       <div className="flex gap-2">
-                        <div className={`w-10 h-10 flex items-center justify-center rounded-xl font-black border-2 ${p.fuelEfficiency === 'A' ? 'bg-green-100 text-green-700 border-green-200 shadow-sm shadow-green-100' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>{p.fuelEfficiency || 'B'}</div>
-                        <div className={`w-10 h-10 flex items-center justify-center rounded-xl font-black border-2 ${p.wetGrip === 'A' ? 'bg-blue-100 text-blue-700 border-blue-200 shadow-sm shadow-blue-100' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>{p.wetGrip || 'B'}</div>
+                        <div className="w-10 h-10 flex items-center justify-center rounded-xl font-black border-2 bg-gray-50 text-gray-400 border-gray-100">{p.loadIndex || '-'}</div>
+                        <div className="w-10 h-10 flex items-center justify-center rounded-xl font-black border-2 bg-gray-50 text-gray-400 border-gray-100">{p.speedRating || '-'}</div>
                       </div>
-                      <div className="flex items-center gap-1 text-orange-400 text-[10px] font-black italic">
-                        <Star size={12} fill="currentColor" /> {p.rating || 5}
+                      <div className="text-[9px] font-black text-gray-400 uppercase italic">
+                        {p.rimDiameter ? `${p.rimDiameter} inch` : '-'}
                       </div>
                     </div>
                   </td>
                   <td className="p-8">
-                    <span className="text-2xl font-black text-gray-900 tracking-tighter italic">{(p.price || 0).toLocaleString('vi-VN')}đ</span>
+                    <span className="text-2xl font-black text-gray-900 tracking-tighter italic">{(p.price || 0).toLocaleString('vi-VN')} vnđ</span>
                   </td>
                   <td className="p-8">
                     <div className="flex justify-center gap-4">
@@ -454,10 +331,10 @@ export default function ProductsPage() {
               {/* Row 1: Image & Basic Info */}
               <div className="flex flex-col md:flex-row gap-8">
                 <div className="w-full md:w-56 shrink-0 relative border-4 border-dashed border-gray-100 rounded-[40px] p-6 text-center hover:border-red-500 transition-all group bg-gray-50/30 overflow-hidden aspect-square flex flex-col items-center justify-center">
-                  {itemForm.image ? (
+                  {itemForm.images?.url ? (
                     <div className="relative w-full h-full">
-                      <img src={itemForm.image} className="w-full h-full object-fill rounded-[32px]" alt="Preview" />
-                      <button type="button" onClick={() => setItemForm({...itemForm, image: ''})} className="absolute top-0 right-0 bg-red-600 text-white p-2 rounded-full shadow-lg"><X size={14} /></button>
+                      <img src={itemForm.images.url} className="w-full h-full object-fill rounded-[32px]" alt="Preview" />
+                      <button type="button" onClick={() => { setImageChanged(false); setItemForm({...itemForm, images: undefined}); }} className="absolute top-0 right-0 bg-red-600 text-white p-2 rounded-full shadow-lg"><X size={14} /></button>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center cursor-pointer">
@@ -471,16 +348,17 @@ export default function ProductsPage() {
                 <div className="flex-1 space-y-5">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-gray-400 ml-4 tracking-widest italic font-bold">Tên sản phẩm lốp</label>
-                    <input required placeholder="Ví dụ: DRC 1100-20 D602..." className="w-full p-4 bg-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-red-100 font-black italic uppercase text-sm border-2 border-transparent focus:border-red-100 transition-all shadow-inner" value={itemForm.name} onChange={e => setItemForm({...itemForm, name: e.target.value})} />
+                    <input required placeholder="Ví dụ: DRC 1100-20 D602..." className="w-full p-4 bg-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-red-100 font-black italic uppercase text-sm border-2 border-transparent focus:border-red-100 transition-all shadow-inner" value={itemForm.name} onChange={e => setItemForm({...itemForm, name: e.target.value, slug: generateSlug(e.target.value)})} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-black uppercase text-gray-400 ml-4 tracking-widest italic font-bold">Giá niêm yết (đ)</label>
-                      <input required type="number" className="w-full p-4 bg-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-red-100 font-black text-sm border-2 border-transparent focus:border-red-100 transition-all shadow-inner" value={itemForm.price} onChange={e => setItemForm({...itemForm, price: e.target.value})} />
+                      <input required type="number" className="w-full p-4 bg-gray-100 rounded-2xl outline-none focus:ring-4 focus:ring-red-100 font-black text-sm border-2 border-transparent focus:border-red-100 transition-all shadow-inner" value={itemForm.price || 0} onChange={e => setItemForm({...itemForm, price: Number(e.target.value)})} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-black uppercase text-gray-400 ml-4 tracking-widest italic font-bold">Mã phân loại</label>
-                      <select className="w-full p-4 bg-gray-100 rounded-2xl font-black italic text-[10px] uppercase outline-none border-2 border-transparent focus:border-red-100 transition-all cursor-pointer shadow-sm" value={itemForm.category_id} onChange={e => setItemForm({...itemForm, category_id: e.target.value})}>
+                      <select className="w-full p-4 bg-gray-100 rounded-2xl font-black italic text-[10px] uppercase outline-none border-2 border-transparent focus:border-red-100 transition-all cursor-pointer shadow-sm" value={itemForm.categoryId || ''} onChange={e => setItemForm({...itemForm, categoryId: e.target.value})}>
+                        <option value="" disabled className="text-gray-400">-- Chọn phân loại --</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
@@ -496,9 +374,9 @@ export default function ProductsPage() {
                   <input placeholder="SKU-XXX..." className="w-full p-4 pl-14 bg-gray-50 rounded-2xl outline-none text-xs font-black uppercase shadow-inner" value={itemForm.sku} onChange={e => setItemForm({...itemForm, sku: e.target.value})} />
                 </div>
                 <div className="space-y-1 relative">
-                  <LinkIcon className="absolute left-6 top-1/2 translate-y-1 text-gray-300" size={18} />
-                  <label className="text-[10px] font-black uppercase text-gray-400 ml-12 tracking-widest font-bold">Đường dẫn SEO</label>
-                  <input placeholder="lop-xe-drc-..." className="w-full p-4 pl-14 bg-gray-50 rounded-2xl outline-none text-xs font-black lowercase shadow-inner" value={itemForm.slug} onChange={e => setItemForm({...itemForm, slug: e.target.value})} />
+                  <Database className="absolute left-6 top-1/2 translate-y-1 text-gray-300" size={18} />
+                  <label className="text-[10px] font-black uppercase text-gray-400 ml-12 tracking-widest font-bold">Số lượng tồn kho</label>
+                  <input type="number" min="0" placeholder="0" className="w-full p-4 pl-14 bg-gray-50 rounded-2xl outline-none text-xs font-black uppercase shadow-inner" value={itemForm.stockQuantity || 0} onChange={e => setItemForm({...itemForm, stockQuantity: Number(e.target.value)})} />
                 </div>
               </div>
 
@@ -513,55 +391,25 @@ export default function ProductsPage() {
                 </h4>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                  {[
-                    { label: 'Cân nặng (kg)', key: 'weight', icon: Scale, type: 'number', step: '0.1' },
-                    { label: 'Bảo hành (th)', key: 'warrantyPeriod', icon: ShieldCheck, type: 'number' },
-                    { label: 'Độ ồn (dB)', key: 'noiseLevel', icon: Volume2, type: 'number' },
-                    { label: 'Đánh giá (1-5)', key: 'rating', icon: Star, type: 'number', step: '0.1' }
-                  ].map(field => (
-                    <div key={field.key} className="space-y-2">
-                      <label className="text-[9px] font-black text-gray-400 uppercase ml-2 flex items-center gap-1 tracking-widest"><field.icon size={12}/> {field.label}</label>
-                      <input
-                        type={field.type}
-                        step={field.step}
-                        className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none transition-all"
-                        value={techSpecsForm[field.key as keyof typeof techSpecsForm]}
-                        onChange={e => setTechSpecsForm({...techSpecsForm, [field.key]: e.target.value})}
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Thương hiệu</label>
-                    <input className="w-full p-4 bg-white border-2 border-transparent rounded-2xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={techSpecsForm.brand} onChange={e => setTechSpecsForm({...techSpecsForm, brand: e.target.value})} />
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Kích cỡ</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.size || ''} onChange={e => setItemForm({...itemForm, size: e.target.value})} />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Nơi xuất xứ</label>
-                    <input className="w-full p-4 bg-white border-2 border-transparent rounded-2xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={techSpecsForm.origin} onChange={e => setTechSpecsForm({...techSpecsForm, origin: e.target.value})} />
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Đường kính vành</label>
+                    <input type="number" className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.rimDiameter ?? ''} onChange={e => setItemForm({...itemForm, rimDiameter: e.target.value ? Number(e.target.value) : undefined})} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Chỉ số tải</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.loadIndex || ''} onChange={e => setItemForm({...itemForm, loadIndex: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Tốc độ tối đa</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.speedRating || ''} onChange={e => setItemForm({...itemForm, speedRating: e.target.value})} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-6">
-                  {[
-                    { label: 'Nhiên liệu', key: 'fuelEfficiency', options: GRADES, color: 'text-green-600' },
-                    { label: 'Bám đường', key: 'wetGrip', options: GRADES, color: 'text-blue-600' },
-                    { label: 'Mùa vụ', key: 'seasonType', options: SEASONS, isObject: true }
-                  ].map(sel => (
-                    <div key={sel.key} className="space-y-2">
-                      <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">{sel.label}</label>
-                      <select
-                        className={`w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-[11px] shadow-sm focus:border-red-600 outline-none cursor-pointer ${sel.color || 'text-gray-900'}`}
-                        value={techSpecsForm[sel.key as keyof typeof techSpecsForm]}
-                        onChange={e => setTechSpecsForm({...techSpecsForm, [sel.key]: e.target.value})}
-                      >
-                        <option value="">Chọn</option>
-                        {sel.isObject ? (sel.options as {value: string, label: string}[]).map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>) : (sel.options as string[]).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                      </select>
-                    </div>
-                  ))}
-                </div>
+
               </div>
 
               {/* Description */}
@@ -576,9 +424,9 @@ export default function ProductsPage() {
               <button
                 type="button"
                 onClick={() => {
+                  setImageChanged(false);
                   setIsFormOpen(false);
-                  setItemForm({ id: null, name: '', sku: '', slug: '', price: '', category_id: '', image: '', cloudinary_id: '', description: '' });
-                setTechSpecsForm({ size: '', rimDiameter: '', loadIndex: '', speedRating: '', tireType: '', weight: '', warrantyPeriod: '', brand: '', origin: '', fuelEfficiency: '', wetGrip: '', noiseLevel: '', rating: '', seasonType: '' });
+                  setItemForm(emptyProduct);
                 }}
                 className="flex-1 py-6 bg-white text-gray-400 border border-gray-200 rounded-[30px] font-black uppercase tracking-widest text-[11px] hover:bg-gray-100 transition-all active:scale-95 shadow-sm shadow-gray-100"
               >
@@ -586,9 +434,10 @@ export default function ProductsPage() {
               </button>
               <button
                 onClick={handleSubmit}
-                className={`flex-[2] py-6 ${itemForm.id ? 'bg-blue-600' : 'bg-red-600'} text-white rounded-[30px] font-black uppercase tracking-widest text-[11px] shadow-2xl hover:scale-105 transition-all active:scale-95 shadow-red-900/20 border-b-8 ${itemForm.id ? 'border-blue-900/50' : 'border-red-900/50'}`}
+                disabled={isUploading}
+                className={`flex-[2] py-6 ${itemForm.id ? 'bg-blue-600' : 'bg-red-600'} text-white rounded-[30px] font-black uppercase tracking-widest text-[11px] shadow-2xl hover:scale-105 transition-all active:scale-95 shadow-red-900/20 border-b-8 ${itemForm.id ? 'border-blue-900/50' : 'border-red-900/50'} disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
               >
-                {itemForm.id ? "Lưu lại thay đổi hệ thống" : "Xác nhận đăng bán vào kho"}
+                {isUploading ? 'Đang tải ảnh lên...' : (itemForm.id ? "Lưu lại thay đổi hệ thống" : "Xác nhận đăng bán vào kho")}
               </button>
             </div>
           </div>

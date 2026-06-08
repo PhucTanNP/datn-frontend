@@ -25,7 +25,7 @@ export default function CheckoutPage() {
     notes: ''
   });
 
-  const total = items.reduce((sum, item) => sum + ((item.product?.price || 0) * item.quantity), 0);
+  const total = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
   const shippingFee = total >= 500000 ? 0 : 30000;
   const grandTotal = total + shippingFee;
 
@@ -184,7 +184,7 @@ export default function CheckoutPage() {
                         <span className="text-gray-900 font-black uppercase text-xs tracking-tight">{item.product?.name}</span>
                         <span className="text-red-600 font-bold text-[10px]">SỐ LƯỢNG: {item.quantity}</span>
                       </div>
-                      <span className="text-gray-900 font-black">{((item.product?.price || 0) * item.quantity).toLocaleString()}đ</span>
+                      <span className="text-gray-900 font-black">{(item.unit_price * item.quantity).toLocaleString()}đ</span>
                     </div>
                   ))}
                 </div>
@@ -215,11 +215,44 @@ export default function CheckoutPage() {
                     <div className="mb-4 text-center text-red-700 font-bold">Có lỗi với mã QR. Vui lòng liên hệ đại lý để được hỗ trợ.</div>
                   )}
 
-                  <label className="block text-xs font-bold mb-2">Tải lên ảnh bằng chứng thanh toán (JPG/PNG/PDF, ≤5MB)</label>
-                  <input type="file" accept="image/jpeg,image/png,application/pdf" onChange={handleFileSelect} className="w-full mb-2" />
-                  {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
-                  {paymentImage && <p className="text-sm text-gray-700 mb-2">Chọn: {paymentImage.name}</p>}
-                  {uploading && <p className="text-sm text-gray-500">Đang tải lên...</p>}
+                  <label className="block text-xs font-bold mb-2">
+                          Tải lên ảnh đã thanh toán (JPG/PNG/PDF, ≤5MB)
+                        </label>
+
+                        <label className="flex items-center justify-center gap-3 w-full h-16 border-2 border-dashed border-red-200 rounded-xl cursor-pointer bg-white hover:bg-red-50 transition-all">
+                        <span className="text-xl">📤</span>
+
+                        <div>
+                          <p className="font-bold text-sm text-gray-700">
+                            {paymentImage ? paymentImage.name : "Chọn ảnh hoặc PDF"}
+                          </p>
+
+                          {!paymentImage && (
+                            <p className="text-[11px] text-gray-500">
+                              Nhấn để tải lên
+                            </p>
+                          )}
+                        </div>
+
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,application/pdf"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+
+                        {uploadError && (
+                          <p className="text-sm text-red-600 mt-2">
+                            {uploadError}
+                          </p>
+                        )}
+
+                        {uploading && (
+                          <p className="text-sm text-gray-500 mt-2">
+                            Đang tải lên...
+                          </p>
+                        )}
                 </div>
 
                 <button
@@ -239,43 +272,10 @@ export default function CheckoutPage() {
               </div>
               <div>
                 <h2 className="text-3xl font-black text-gray-900 uppercase italic tracking-tight">Đã khởi tạo đơn hàng!</h2>
-                <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mt-2">Mã đơn: #{orderCreated.order_number}</p>
+                <p className="text-gray-700 font-bold uppercase text-[20px] tracking-widest mt-2">Mã đơn: #{orderCreated.order_number}</p>
               </div>
 
-              {/* KHU VỰC QR THANH TOÁN */}
-              <div className="bg-gray-50 rounded-[40px] p-8 border-2 border-dashed border-red-200">
-                <h3 className="font-black text-gray-900 uppercase italic mb-2">Quét mã chuyển khoản</h3>
-                <p className="text-xs text-gray-400 mb-8 font-bold">Vui lòng chuyển đúng số tiền và nội dung để được duyệt nhanh nhất.</p>
-                
-                <div className="flex flex-col md:flex-row items-center justify-center gap-10">
-                  <div className="w-56 h-56">
-                    {process.env.NEXT_PUBLIC_PAYMENT_QR_IMAGE_URL ? (
-                      <div className="w-full h-full bg-white rounded-3xl p-4 shadow-xl border border-gray-100 relative group overflow-hidden">
-                        <img
-                          src={process.env.NEXT_PUBLIC_PAYMENT_QR_IMAGE_URL}
-                          alt="VietQR"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-full h-full bg-white rounded-3xl border-2 border-gray-200 flex items-center justify-center text-red-700 p-4 text-center">
-                        <p className="font-bold">Có lỗi với mã QR. Vui lòng liên hệ đại lý để được hỗ trợ.</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="text-left space-y-4">
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 min-w-48 shadow-sm">
-                      <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Số tiền</p>
-                      <p className="text-xl font-black text-red-600 italic">{grandTotal.toLocaleString()}đ</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 min-w-48 shadow-sm">
-                      <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Nội dung</p>
-                      <p className="text-sm font-black text-gray-900 italic">DRC {orderCreated.order_number}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              
 
               {/* UPLOAD BIÊN LAI */}
               <div className="mt-6">

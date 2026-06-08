@@ -19,7 +19,7 @@ export function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
       {/* Hình ảnh sản phẩm */}
       <div className="w-24 h-24 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0">
         <Image
-          src={Array.isArray(product?.images) && product.images[0]?.url ? product.images[0].url : '/placeholder.jpg'} // Hình đầu tiên hoặc placeholder
+          src={product.images?.url || '/placeholder.jpg'}
           alt={product.name}
           width={96}
           height={96}
@@ -34,9 +34,7 @@ export function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
             <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1">
               {product.name} {/* Tên sản phẩm */}
             </h3>
-            <p className="text-gray-500 text-sm">
-              {product.brand} • {product.size} {/* Thương hiệu và kích cỡ */}
-            </p>
+            
           </div>
           {/* Button xóa */}
           <button

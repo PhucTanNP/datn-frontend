@@ -28,7 +28,6 @@ export default function ProductsPage() {
   const [notFound, setNotFound] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [tireType, setTireType] = useState<string>('');
   const [size, setSize] = useState<string>('');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
@@ -57,7 +56,7 @@ export default function ProductsPage() {
       setError(null);
       setNotFound(false);
       console.log('Loading products with filters:', {
-        currentPage, selectedCategory, tireType, size, minPrice, maxPrice, search
+        currentPage, selectedCategory, size, minPrice, maxPrice, search
       });
 
       // Build query params
@@ -67,7 +66,6 @@ export default function ProductsPage() {
       });
 
       if (selectedCategory) params.append('category', selectedCategory);
-      if (tireType) params.append('tire_type', tireType);
       if (size) params.append('size', size);
       if (minPrice) params.append('min_price', minPrice);
       if (maxPrice) params.append('max_price', maxPrice);
@@ -85,7 +83,7 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, selectedCategory, tireType, size, minPrice, maxPrice, search]);
+  }, [currentPage, selectedCategory, size, minPrice, maxPrice, search]);
 
   // Products are now filtered by backend API
   const displayedProducts = products;
@@ -98,7 +96,6 @@ export default function ProductsPage() {
   const clearFilters = () => {
     setSearch('');
     setSelectedCategory('');
-    setTireType('');
     setSize('');
     setMinPrice('');
     setMaxPrice('');
@@ -175,18 +172,6 @@ export default function ProductsPage() {
             {categories.map(category => (
               <option key={category.id} value={category.slug}>{category.name}</option>
             ))}
-          </select>
-
-          <select
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            value={tireType}
-            onChange={(e) => setTireType(e.target.value)}
-          >
-            <option value="">Tất cả loại lốp</option>
-            <option value="motorcycle">Lốp xe máy</option>
-            <option value="passenger">Lốp xe hơi</option>
-            <option value="SUV">Lốp SUV</option>
-            <option value="truck">Lốp xe tải</option>
           </select>
 
           <input
