@@ -13,6 +13,7 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
   pending: 'Chờ xử lý',
   awaiting_payment: 'Chờ thanh toán',
   paid_confirmed: 'Đã thanh toán',
+  confirmed: 'Đã xác nhận',
   processing: 'Đang xử lý',
   shipped: 'Đã giao',
   delivered: 'Đã hoàn thành',
@@ -41,6 +42,7 @@ export default function OrdersPage() {
   const [notFound, setNotFound] = useState(false);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; orderId: string | null }>({ isOpen: false, orderId: null });
 
   // Derived filtered orders based on search and status
   const filteredOrders = useMemo(() => {
@@ -82,7 +84,6 @@ export default function OrdersPage() {
       const response = await api.get('/api/v1/admin/orders');
       setOrders(response.data.data || []);
     } catch (error) {
-      console.error('Failed to load orders:', error);
       setNotFound(true);
     } finally {
       setLoading(false);
@@ -96,7 +97,6 @@ export default function OrdersPage() {
       await loadOrders();
       setToastMessage('Cập nhật trạng thái đơn hàng thành công');
     } catch (error) {
-      console.error('Failed to update order:', error);
       setToastMessage('Cập nhật đơn hàng thất bại');
     } finally {
       setActionLoading(prev => ({ ...prev, [orderId]: false }));
@@ -104,15 +104,7 @@ export default function OrdersPage() {
   };
 
   const handleOrderDelete = async (orderId: string) => {
-    if (!confirm("Xóa đơn hàng vĩnh viễn?")) return;
-
-    try {
-      await api.delete(`/api/v1/admin/orders/${orderId}`);
-      await loadOrders();
-    } catch (error) {
-      console.error('Failed to delete order:', error);
-      alert('Xóa đơn hàng thất bại. Vui lòng thử lại.');
-    }
+    setDeleteModal({ isOpen: true, orderId });
   };
 
   const handleResetData = () => {
@@ -128,7 +120,6 @@ export default function OrdersPage() {
       await loadOrders();
       setToastMessage('Đã phê duyệt thanh toán');
     } catch (err) {
-      console.error('Approve payment failed', err);
       setToastMessage('Phê duyệt thất bại');
     } finally {
       setActionLoading(prev => ({ ...prev, [orderId]: false }));
@@ -142,7 +133,6 @@ export default function OrdersPage() {
       await loadOrders();
       setToastMessage('Đã từ chối thanh toán');
     } catch (err) {
-      console.error('Deny payment failed', err);
       setToastMessage('Thao tác thất bại');
     } finally {
       setActionLoading(prev => ({ ...prev, [orderId]: false }));
@@ -150,14 +140,19 @@ export default function OrdersPage() {
   };
 
   const handleDeleteOrder = async (orderId: string) => {
-    if (!confirm('Xác nhận xóa đơn hàng?')) return;
+    setDeleteModal({ isOpen: true, orderId });
+  };
+
+  const confirmDelete = async () => {
+    const id = deleteModal.orderId;
+    if (!id) return;
+    setDeleteModal({ isOpen: false, orderId: null });
     try {
-      await api.delete(`/api/v1/admin/orders/${orderId}`);
+      await api.delete(`/api/v1/admin/orders/${id}`);
       await loadOrders();
-      alert('Đã xóa');
+      setToastMessage('Đã xóa đơn hàng');
     } catch (err) {
-      console.error('Delete order failed', err);
-      alert('Xóa thất bại');
+      setToastMessage('Xóa thất bại');
     }
   };
 
@@ -454,14 +449,6 @@ return (
                   </h4>
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between py-1 border-b border-gray-50">
-                      <span className="text-gray-400 font-bold">ID đơn hàng:</span>
-                      <span className="font-semibold text-gray-800 break-all text-[10px] text-right ml-4">{selectedOrder.id}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-gray-50">
-                      <span className="text-gray-400 font-bold">ID người dùng (uuid):</span>
-                      <span className="font-semibold text-gray-800 break-all text-[10px] text-right ml-4">{selectedOrder.user_id}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-gray-50">
                       <span className="text-gray-400 font-bold">Mã số:</span>
                       <span className="font-bold text-red-600">{selectedOrder.order_number}</span>
                     </div>
@@ -587,7 +574,7 @@ return (
 
                   {/* Hiển thị hóa đơn chuyển khoản (payment_proof_url) */}
                   <div className="space-y-2">
-                    <span className="text-xs font-bold text-gray-500 block">payment_proof_url (Minh chứng chuyển khoản):</span>
+                    <span className="text-xs font-bold text-gray-500 block">Minh chứng chuyển khoản:</span>
                     {selectedOrder.payment_proof_url ? (
                       <div className="relative group rounded-2xl overflow-hidden border border-gray-200 h-44 bg-slate-900 flex items-center justify-center shadow-inner">
                         <img 
@@ -673,6 +660,38 @@ return (
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-[#111827] text-white py-3.5 px-6 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold border border-gray-800 animate-slideUp">
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Modal xác nhận xóa đơn hàng */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-gray-100 animate-slideUp">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                <Trash2 size={28} className="text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Xóa đơn hàng?</h3>
+              <p className="text-gray-500 mb-8 leading-relaxed">
+                Hành động này không thể hoàn tác. <br />
+                Đơn hàng và tất cả dữ liệu liên quan sẽ bị xóa vĩnh viễn.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteModal({ isOpen: false, orderId: null })}
+                  className="flex-1 py-3 px-6 rounded-2xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition-all active:scale-[0.97]"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 py-3 px-6 rounded-2xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-all active:scale-[0.97] shadow-lg shadow-red-200"
+                >
+                  Xóa
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

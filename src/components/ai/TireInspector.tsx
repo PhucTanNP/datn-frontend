@@ -38,11 +38,12 @@ export function TireInspector() {
     const formData = new FormData();
     formData.append('image', file);
     try {
-      const { data } = await api.post('/inspect', formData);
-      setResult(data);
-      drawCracks(data);
+      // Gọi BE -> BE gọi AI Service (GraphRag) để detect
+      const response = await api.post('/api/v1/inspect', formData);
+      const resultData = response.data?.data ?? response.data;
+      setResult(resultData);
+      drawCracks(resultData);
     } catch (error) {
-      console.error(error);
     } finally {
       setLoading(false);
     }

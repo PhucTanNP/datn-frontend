@@ -40,7 +40,6 @@ export default function UsersPage() {
       const response = await api.get('/api/v1/admin/users');
       setUsers(response.data.data || []);
     } catch (error) {
-      console.error('Failed to load users:', error);
       setNotFound(true);
     } finally {
       setLoading(false);

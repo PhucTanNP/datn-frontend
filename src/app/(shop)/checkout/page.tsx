@@ -42,7 +42,6 @@ export default function CheckoutPage() {
       setOrderCreated(response.data.data);
       clearCart();
     } catch (error) {
-      console.error('Failed to create order:', error);
       alert('Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại.');
     } finally {
       setLoading(false);
@@ -82,7 +81,6 @@ export default function CheckoutPage() {
         // redirect to orders page after successful upload
         window.location.href = '/orders';
       } catch (err) {
-        console.error('Upload failed:', err);
         setUploadError('Không thể tải ảnh lên. Vui lòng thử lại.');
       } finally {
         setUploading(false);

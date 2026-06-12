@@ -70,7 +70,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ user });
       } catch (error) {
         // If fetching user failed (including refresh failure), logout
-        console.error('Failed to fetch user during initialize:', error);
         get().logout();
       }
     }

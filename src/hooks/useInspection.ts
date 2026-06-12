@@ -10,9 +10,11 @@ export function useInspection() {
     const formData = new FormData();
     formData.append('image', file);
     try {
-      const { data } = await api.post('/inspect', formData);
-      setResult(data);
-      return data;
+      // Gọi BE /api/v1/inspect -> BE gọi AI Service (GraphRag) detect -> BE lưu Supabase -> trả về FE
+      const response = await api.post('/api/v1/inspect', formData);
+      const resultData = response.data?.data ?? response.data;
+      setResult(resultData);
+      return resultData;
     } finally {
       setLoading(false);
     }

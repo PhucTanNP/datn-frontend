@@ -3,7 +3,7 @@ export interface Category {
   name: string;
   slug: string;
   description?: string;
-  image_url?: string;
-  parent_id?: string;
-  created_at: string;
+  imageUrl: string;
+  parentId?: string;
+  createdAt: string;
 }

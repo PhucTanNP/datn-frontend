@@ -43,7 +43,6 @@ export default function CategoriesPage() {
       const response = await api.get('/api/v1/admin/categories');
       setCategories(response.data.data || []);
     } catch (error) {
-      console.error('Failed to load categories:', error);
       setNotFound(true);
     } finally {
       setLoading(false);
@@ -87,7 +86,6 @@ export default function CategoriesPage() {
         throw new Error('Upload failed: No secure_url in response');
       }
     } catch (error) {
-      console.error('Upload error:', error);
       alert('Upload failed. Please try again.');
       URL.revokeObjectURL(previewUrl);
     } finally {
@@ -124,7 +122,6 @@ export default function CategoriesPage() {
         parent_id: null
       });
     } catch (error) {
-      console.error('Failed to save category:', error);
       alert('Lưu thất bại. Vui lòng thử lại.');
     }
   };
@@ -135,8 +132,8 @@ export default function CategoriesPage() {
       name: category.name,
       slug: category.slug,
       description: category.description || '',
-      image_url: category.image_url || '',
-      parent_id: category.parent_id || null
+      image_url: category.imageUrl || '',
+      parent_id: category.parentId || null
     });
     setShowForm(true);
   };
@@ -148,7 +145,6 @@ export default function CategoriesPage() {
       await api.delete(`/api/v1/admin/categories/${id}`);
       await loadCategories();
     } catch (error) {
-      console.error('Failed to delete category:', error);
       alert('Xóa thất bại. Vui lòng thử lại.');
     }
   };
@@ -198,10 +194,10 @@ export default function CategoriesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredCategories.map((category) => (
             <div key={category.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-              {category.image_url && (
+              {category.imageUrl && (
                 <div className="aspect-square bg-gray-100">
                   <img
-                    src={category.image_url}
+                    src={category.imageUrl}
                     alt={category.name}
                     className="w-full h-full object-cover"
                   />

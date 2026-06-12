@@ -34,7 +34,6 @@ export default function DashboardPage() {
       setProducts(productsRes.data.data || []);
       setCategories(categoriesRes.data.data || []);
     } catch (error) {
-      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }

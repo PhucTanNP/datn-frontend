@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Upload, X, Search, Info, Scale, Zap, Wind, Tag, Database } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, X, Search, Info, Zap, Wind, Tag, Database, Weight, Gauge, Maximize2, Ruler } from 'lucide-react';
 import api from '@/lib/api';
 import type { Product, Category } from '@/types/product';
 import type { ProductImage } from '@/types/productImage';
@@ -63,11 +63,9 @@ export default function ProductsPage() {
       setProducts(productsRes.data.data || []);
       setCategories(categoriesRes.data.data || []);
     } catch (error) {
-      console.error('Failed to load data:', error);
       setNotFound(true);
     } finally {
       setLoading(false);
-      console.log('Products loaded:', products)
     }
   };
 
@@ -98,8 +96,7 @@ export default function ProductsPage() {
       revokePreviewUrl(previewUrl); // Giải phóng bộ nhớ preview local
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error('Upload failed:', err);
-      alert(`Upload thất bại: ${message}\nKiểm tra Console/Network tab.`);
+      alert(`Upload thất bại: ${message}`);
     } finally {
       setIsUploading(false);
     }
@@ -129,13 +126,6 @@ export default function ProductsPage() {
         productData.cloudinary_id = itemForm.images?.cloudinaryId || undefined;
       }
 
-      console.log('🚀 Submitting productData:', {
-        ...productData,
-        imageChanged,
-        hasImage: !!productData.image,
-        hasCloudinaryId: !!productData.cloudinary_id,
-      });
-
       if (itemForm.id) {
         await api.put(`/api/v1/admin/products/${itemForm.id}`, productData);
       } else {
@@ -147,7 +137,6 @@ export default function ProductsPage() {
       setIsFormOpen(false);
       await loadProducts();
     } catch (error) {
-      console.error('Failed to save product:', error);
     }
   };
 
@@ -170,12 +159,10 @@ export default function ProductsPage() {
 
     setDeleting(true);
     try {
-      const res = await api.delete(`/api/v1/admin/products/${deleteModal.productId}`);
-      console.log('Delete response:', res.data);
+      await api.delete(`/api/v1/admin/products/${deleteModal.productId}`);
       await loadProducts();
       setDeleteModal({ isOpen: false, productId: null, productName: '' });
     } catch (error) {
-      console.error('Failed to delete product:', error);
       const axiosError = error as { response?: { data?: { message?: string } } };
       const msg = axiosError?.response?.data?.message || (error instanceof Error ? error.message : 'Vui lòng thử lại.');
       alert(`Xóa sản phẩm thất bại: ${msg}`);
@@ -234,8 +221,8 @@ export default function ProductsPage() {
             <thead className="bg-gray-50 border-b border-gray-100 italic">
               <tr>
                 <th className="p-8 font-black text-[11px] uppercase text-gray-400 tracking-widest">Sản phẩm & SKU</th>
-                <th className="p-8 font-black text-[11px] uppercase text-gray-400 tracking-widest">Thông số kỹ thuật</th>
-                <th className="p-8 font-black text-[11px] uppercase text-gray-400 tracking-widest text-center">Hiệu suất</th>
+                <th className="p-8 font-black text-[11px] uppercase text-gray-400 tracking-widest text-center">Kích thước</th>
+                <th className="p-8 font-black text-[11px] uppercase text-gray-400 tracking-widest text-center">Tải & Tốc độ</th>
                 <th className="p-8 font-black text-[11px] uppercase text-gray-400 tracking-widest">Giá niêm yết</th>
                 <th className="p-8 font-black text-[11px] uppercase text-gray-400 tracking-widest text-center">Thao tác</th>
               </tr>
@@ -257,35 +244,54 @@ export default function ProductsPage() {
                       <div>
                         <span className="font-black text-base text-gray-900 block uppercase italic group-hover:text-red-600 transition-colors leading-tight mb-2">{p.name}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black uppercase text-gray-700 bg-gray-100 px-3 py-1 rounded-full">số lượng {p.stockQuantity || 'K-001'}</span>
+                          <span className="text-[10px] font-black uppercase text-gray-700 bg-gray-100 px-3 py-1 rounded-full">SL: {p.stockQuantity ?? 0}</span>
                           <span className="text-[10px] font-black uppercase text-red-600 border border-red-100 px-3 py-1 rounded-full tracking-widest">{p.category?.name || 'Chưa phân loại'}</span>
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="p-8">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-4 text-[10px] font-bold text-gray-500 uppercase italic">
-                        <span className="flex items-center gap-1"><Scale size={14} className="text-gray-300"/> {p.size || '-'}</span>
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-col items-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl px-5 py-3 border border-gray-200 min-w-[90px]">
+                          <Ruler size={16} className="text-gray-400 mb-1" />
+                          <span className="font-black text-sm text-gray-900 leading-none">{p.size || '—'}</span>
+                          <span className="text-[8px] font-bold text-gray-400 uppercase mt-1">Size (inch)</span>
+                        </div>
+                        <div className="flex flex-col items-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl px-5 py-3 border border-gray-200 min-w-[90px]">
+                          <Maximize2 size={14} className="text-gray-400 mb-1" />
+                          <span className="font-black text-sm text-gray-900 leading-none">{p.rimDiameter ? `${p.rimDiameter}"` : '—'}</span>
+                          <span className="text-[8px] font-bold text-gray-400 uppercase mt-1">ĐK Vành</span>
+                        </div>
                       </div>
-                      <div className="text-[10px] font-black text-gray-700 uppercase tracking-tighter">
-                        Mã SKU: {p.sku || '-'}
+                      <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                        SKU: <span className="text-gray-700">{p.sku || '—'}</span>
                       </div>
                     </div>
                   </td>
                   <td className="p-8">
                     <div className="flex flex-col items-center gap-2">
-                      <div className="flex gap-2">
-                        <div className="w-10 h-10 flex items-center justify-center rounded-xl font-black border-2 bg-gray-50 text-gray-400 border-gray-100">{p.loadIndex || '-'}</div>
-                        <div className="w-10 h-10 flex items-center justify-center rounded-xl font-black border-2 bg-gray-50 text-gray-400 border-gray-100">{p.speedRating || '-'}</div>
-                      </div>
-                      <div className="text-[9px] font-black text-gray-400 uppercase italic">
-                        {p.rimDiameter ? `${p.rimDiameter} inch` : '-'}
+                      <div className="flex gap-3">
+                        <div className="flex flex-col items-center bg-amber-50 rounded-2xl px-5 py-3 border border-amber-200 min-w-[80px]">
+                          <Weight size={16} className="text-amber-500 mb-1" />
+                          <span className="font-black text-base text-amber-700 leading-none">{p.loadIndex || '—'}</span>
+                          <span className="text-[8px] font-bold text-amber-500 uppercase mt-1">Tải (kg)</span>
+                        </div>
+                        <div className="flex flex-col items-center bg-blue-50 rounded-2xl px-5 py-3 border border-blue-200 min-w-[80px]">
+                          <Gauge size={16} className="text-blue-500 mb-1" />
+                          <span className="font-black text-base text-blue-700 leading-none">{p.speedRating || '—'}</span>
+                          <span className="text-[8px] font-bold text-blue-500 uppercase mt-1">Tốc độ (km/h)</span>
+                        </div>
                       </div>
                     </div>
                   </td>
                   <td className="p-8">
-                    <span className="text-2xl font-black text-gray-900 tracking-tighter italic">{(p.price || 0).toLocaleString('vi-VN')} vnđ</span>
+                    <div className="flex flex-col items-start">
+                      <span className="text-2xl font-black text-gray-900 tracking-tighter italic">{(p.price || 0).toLocaleString('vi-VN')}<span className="text-sm font-bold text-gray-500 ml-1">đ</span></span>
+                      {p.salePrice ? (
+                        <span className="text-sm font-bold text-red-500 line-through">{(p.salePrice).toLocaleString('vi-VN')}đ</span>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="p-8">
                     <div className="flex justify-center gap-4">

@@ -27,7 +27,6 @@ export default function ProductDetailPage() {
       const response = await api.get(`/api/v1/products/${slug}`);
       setProduct(response.data.data);
     } catch (error) {
-      console.error('Failed to load product:', error);
       setNotFound(true);
       
     } finally {

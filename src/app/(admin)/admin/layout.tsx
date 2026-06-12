@@ -39,7 +39,6 @@ export default function AdminLayout({
         setLoading(false);
       } else if (attempts >= maxAttempts) {
         // Timeout: Nếu sau 5s vẫn chưa có user, có thể token invalid hoặc API lỗi
-        console.error('Timeout waiting for user data');
         window.location.href = '/login'; // Hoặc hiển thị lỗi
       } else {
         attempts++;
