@@ -55,15 +55,15 @@ export function Footer() {
           <ul className="space-y-4 text-gray-400 text-sm">
             <li className="flex items-start gap-3">
               <MapPin size={20} className="text-red-600 shrink-0" />
-              <span>Lô G, Đường số 9, KCN Liên Chiểu, P. Hòa Hiệp Bắc, Q. Liên Chiểu, TP. Đà Nẵng</span>
+              <span>K339/H06/06 TRƯỜNG CHINH, TỔ 16, P.AN KHÊ, THANH KHÊ, TP.ĐÀ NẴNG</span>
             </li>
             <li className="flex items-center gap-3">
               <Phone size={20} className="text-red-600 shrink-0" />
-              <span className="font-bold text-white">1900 1234 - (0236) 3771 105</span>
+              <span className="font-bold text-white">0905 033 776</span>
             </li>
             <li className="flex items-center gap-3">
               <Mail size={20} className="text-red-600 shrink-0" />
-              <span>info@drc.com.vn</span>
+              <span>minhphat.ltd@gmail.com</span>
             </li>
             <li className="mt-6">
               <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex items-center gap-3">

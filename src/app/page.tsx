@@ -33,18 +33,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features section */}
-      <section className="py-12 sm:py-16 container mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-2xl sm:text-3xl font-black uppercase mb-8 sm:mb-10 text-center">
-          Sản phẩm tiêu biểu
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-          {/* Products will be rendered here */}
-          <p className="col-span-full text-center text-gray-400 text-sm sm:text-base italic">
-            Đang cập nhật sản phẩm...
-          </p>
-        </div>
-      </section>
 
       {/* Trust badges */}
       <section className="bg-gray-50 py-10 sm:py-14">

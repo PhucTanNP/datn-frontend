@@ -8,10 +8,8 @@ import {
   Clock, 
   Share2, 
   Video, 
-  MessageCircle, 
   ShoppingBag,
   Globe,
-  Bell,
   ExternalLink
 } from 'lucide-react';
 
@@ -20,20 +18,20 @@ const ContactPage = () => {
     {
       icon: <MapPin className="text-red-600" size={24} />,
       title: "Địa chỉ",
-      content: "Lô G, Đường số 6, KCN Hòa Khánh, Liên Chiểu, Đà Nẵng",
-      link: "https://maps.google.com"
+      content: "409 Trường Chinh, An Khê, Thanh Khê, TP.Đà Nẵng",
+      link: "https://www.google.com/maps/dir/?api=1&destination=409+Tr%C6%B0%E1%BB%9Dng+Chinh+An+Kh%C3%AA+%C4%90%C3%A0+N%E1%BA%B5ng"
     },
     {
       icon: <Phone className="text-red-600" size={24} />,
       title: "Hotline",
-      content: "1900 1234",
-      link: "tel:19001234"
+      content: "0905 033 776",
+      link: "tel:0905033776"
     },
     {
       icon: <Mail className="text-red-600" size={24} />,
       title: "Email",
-      content: "info@drc.com.vn",
-      link: "mailto:info@drc.com.vn"
+      content: "minhphat.ltd@gmail.com",
+      link: "mailto:minhphat.ltd@gmail.com"
     },
     {
       icon: <Clock className="text-red-600" size={24} />,
@@ -92,21 +90,30 @@ const ContactPage = () => {
 
           {/* Cột phải: Bản đồ lớn lấp đầy */}
           <div className="lg:w-7/12 h-full bg-white p-2 rounded-[40px] border border-gray-100 shadow-xl relative overflow-hidden">
-             <div className="w-full h-full bg-slate-100 rounded-[34px] flex flex-col items-center justify-center text-gray-400 gap-4 border border-dashed border-gray-200 relative group">
-                <Globe size={48} className="text-red-100 group-hover:text-red-500 transition-colors duration-500" />
-                <div className="text-center">
-                  <p className="text-xs font-black uppercase tracking-widest text-gray-900">Bản đồ trụ sở chính DRC</p>
-                  <p className="text-[10px] mt-1">KCN Hòa Khánh, Liên Chiểu, Đà Nẵng</p>
-                </div>
-                <button className="bg-white px-6 py-2.5 rounded-xl text-[10px] font-black shadow-lg border border-gray-50 text-red-600 uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center gap-2">
-                   Xem Google Maps <ExternalLink size={14} />
-                </button>
-
-                {/* Decorative Elements */}
-                <div className="absolute top-6 left-6 bg-red-600 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-lg z-10">
-                  DRC HEADQUARTERS
-                </div>
-             </div>
+            <div className="w-full h-full rounded-[34px] overflow-hidden relative group">
+              <iframe
+                src="https://www.google.com/maps?q=409+Tr%C6%B0%E1%BB%9Dng+Chinh+An+Kh%C3%AA+%C4%90%C3%A0+N%E1%BA%B5ng&output=embed"
+                width="100%"
+                height="100%"
+                style={{ border: 0, minHeight: '500px' }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Bản đồ DRC"
+              />
+              {/* Decorative Elements */}
+              <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-lg z-10">
+                DRC HEADQUARTERS
+              </div>
+              <a
+                href="https://www.google.com/maps/dir/?api=1&destination=409+Tr%C6%B0%E1%BB%9Dng+Chinh+An+Kh%C3%AA+%C4%90%C3%A0+N%E1%BA%B5ng"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute bottom-4 right-4 bg-white px-4 py-2 rounded-xl text-[10px] font-black shadow-lg border border-gray-50 text-red-600 uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center gap-2 z-10"
+              >
+                Chỉ đường <ExternalLink size={14} />
+              </a>
+            </div>
           </div>
         </div>
       </main>
@@ -118,22 +125,6 @@ const ContactPage = () => {
         </p>
       </footer>
 
-      {/* Floating Buttons */}
-      <div className="fixed bottom-6 left-6 z-50">
-        <button className="w-14 h-14 bg-red-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-red-500/30">
-          <ShoppingBag size={24} />
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-gray-900 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white">
-            2
-          </span>
-        </button>
-      </div>
-
-      <div className="fixed bottom-6 right-6 z-50">
-        <button className="w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-blue-500/30">
-          <MessageCircle size={24} />
-          <span className="absolute top-1 right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>
-        </button>
-      </div>
     </div>
   );
 };

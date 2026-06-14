@@ -64,7 +64,7 @@ export const NotFound = () => {
         {/* Footer trang lỗi */}
         <div className="mt-16 pt-8 border-t border-gray-100">
           <p className="text-gray-400 text-sm italic">
-            Mọi sự cố vui lòng liên hệ Hotline: <span className="text-red-600 font-semibold">1900 1234</span>
+            Mọi sự cố vui lòng liên hệ Hotline: <span className="text-red-600 font-semibold">0905 033 776</span>
           </p>
         </div>
       </div>

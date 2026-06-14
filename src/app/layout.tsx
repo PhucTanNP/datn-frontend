@@ -17,7 +17,11 @@ export const metadata: Metadata = {
   description: "Mua lốp xe DRC Tires. Kiểm tra độ mòn lốp bằng AI tiên tiến. Giao hàng toàn quốc.",
   keywords: "lốp xe, DRC Tires, kiểm tra lốp AI, lốp xe máy, lốp ô tô",
   icons: {
-    icon: '/logo.png',
+    icon: [
+      { url: "/logo-mp.png", sizes: "32x32", type: "image/png" },
+      { url: "/logo-mp.png", sizes: "192x192", type: "image/png" },
+      { url: "/logo-mp.png", sizes: "512x512", type: "image/png" },
+    ],
   },
   manifest: '/manifest.json',
   appleWebApp: {

@@ -20,10 +20,7 @@ export function Header() {
     initialize().catch(console.error);
   }, [initialize]);
 
-  // Đóng menu mobile khi chuyển trang
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [pathname]);
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   const navItems = [
     { name: 'Trang chủ', href: '/', active: pathname === '/' },
@@ -37,8 +34,8 @@ export function Header() {
       {/* Top bar */}
       <div className="bg-red-600 text-white py-1 text-xs sm:text-sm px-4 flex justify-between items-center font-medium">
         <div className="flex gap-2 sm:gap-4">
-          <a href="tel:19001234" className="flex items-center gap-1 hover:underline">
-            <Phone size={14} /> 1900 1234
+          <a href="tel:0905033776" className="flex items-center gap-1 hover:underline">
+            <Phone size={14} /> 0905 033 776
           </a>
           <span className="hidden sm:flex items-center gap-1"><MapPin size={14} /> Đà Nẵng, Việt Nam</span>
         </div>
@@ -53,7 +50,7 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center cursor-pointer group flex-shrink-0">
           <div className="flex flex-col items-center">
-            <img src="/full-logo.png" alt="DRC" className="w-24 sm:w-30 h-6 sm:h-8 object-contain group-hover:scale-110 transition-transform" />
+            <img src="/full-logo.png" alt="DRC" className="w-28 sm:w-36 h-auto object-contain group-hover:scale-110 transition-transform" />
             <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 tracking-tighter">CAO SU ĐÀ NẴNG</span>
           </div>
         </Link>
@@ -143,6 +140,7 @@ export function Header() {
                 <Link
                   key={item.name}
                   href={item.href}
+                  onClick={closeMobileMenu}
                   className={`block px-4 py-3 rounded-xl text-sm font-bold transition-colors ${
                     item.active
                       ? 'bg-red-50 text-red-600'
@@ -159,6 +157,7 @@ export function Header() {
                   <div className="space-y-2">
                     <Link
                       href={user.role === 'admin' ? '/admin' : '/profile'}
+                      onClick={closeMobileMenu}
                       className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
                     >
                       <div className="w-9 h-9 bg-gradient-to-tr from-red-600 to-red-400 rounded-full flex items-center justify-center text-white font-black text-sm">
@@ -182,8 +181,7 @@ export function Header() {
                   </div>
                 ) : (
                   <Link
-                    href="/login"
-                    className="flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-red-700 transition-colors active:scale-[0.98]"
+                    href="/login"                      onClick={closeMobileMenu}                    className="flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-red-700 transition-colors active:scale-[0.98]"
                   >
                     Đăng nhập
                   </Link>
