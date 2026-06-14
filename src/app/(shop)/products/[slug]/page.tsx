@@ -189,25 +189,29 @@ export default function ProductDetailPage() {
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Kích thước</p>
                     <p className="font-bold text-gray-900 text-lg">{product.size || '---'}</p>
                   </div>
-                  {product.rimDiameter && (
+                  <div className="bg-gray-50 rounded-2xl p-4">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Thương hiệu</p>
+                    <p className="font-bold text-gray-900 text-lg">{product.brand || '---'}</p>
+                  </div>
+                  {product.pattern && (
                     <div className="bg-gray-50 rounded-2xl p-4">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Đường kính vành</p>
-                      <p className="font-bold text-gray-900 text-lg">{product.rimDiameter}&quot;</p>
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Kiểu hoa</p>
+                      <p className="font-bold text-gray-900 text-lg">{product.pattern}</p>
                     </div>
                   )}
-                  {product.loadIndex && (
+                  {product.hasTube !== undefined && product.hasTube !== null && (
                     <div className="bg-gray-50 rounded-2xl p-4">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Chỉ số tải</p>
-                      <p className="font-bold text-gray-900 text-lg">{product.loadIndex}</p>
-                    </div>
-                  )}
-                  {product.speedRating && (
-                    <div className="bg-gray-50 rounded-2xl p-4">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Tốc độ tối đa</p>
-                      <p className="font-bold text-gray-900 text-lg">{product.speedRating}</p>
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Loại lốp</p>
+                      <p className="font-bold text-gray-900 text-lg">{product.hasTube ? 'Có săm' : 'Không săm'}</p>
                     </div>
                   )}
                 </div>
+                {product.description && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Mô tả chi tiết</p>
+                    <p className="text-sm text-gray-600 whitespace-pre-line">{product.description}</p>
+                  </div>
+                )}
               </div>
             </div>
 

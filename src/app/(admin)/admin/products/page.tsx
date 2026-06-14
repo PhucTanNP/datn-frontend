@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Upload, X, Search, Info, Zap, Wind, Tag, Database, Weight, Gauge, Maximize2, Ruler } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, X, Search, Info, Zap, Wind, Tag, Database, Ruler } from 'lucide-react';
 import api from '@/lib/api';
 import type { Product, Category } from '@/types/product';
 import type { ProductImage } from '@/types/productImage';
+import type { SpecsFormData } from '@/types/productSchema';
+import { initialSpecs, generateAutoDescription, specsToFormData } from '@/types/productSchema';
 import Loading from '@/app/loading';
 import { NotFound } from '@/app/not-found';
 import { uploadImage, createPreviewUrl, revokePreviewUrl } from '@/lib/cloudinary';
@@ -20,10 +22,10 @@ const generateSlug = (text: string) => {
 };
 
 const emptyProduct: Product = {
-  id: '', categoryId: '', sku: '', name: '', slug: '', description: '',
+  id: '', categoryId: '', sku: '', name: '', slug: '',
   price: 0, salePrice: 0, stockQuantity: 0,
-  size: '', rimDiameter: undefined as unknown as number,
-  loadIndex: '', speedRating: '',
+  brand: '', size: '', sizeType: 'METRIC', pattern: '',
+  productType: 'motorcycle_tire', hasTube: false, specs: {},
   isActive: true, createdAt: '', updatedAt: '',
 };
 
@@ -35,6 +37,9 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 20;
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
     productId: string | null;
@@ -47,22 +52,30 @@ export default function ProductsPage() {
   const [deleting, setDeleting] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [imageChanged, setImageChanged] = useState(false);
+  const [specsForm, setSpecsForm] = useState<SpecsFormData>(initialSpecs);
+
+  // Khi edit: nạp specs từ product có sẵn
+  const loadSpecsFromProduct = (product: Product) => {
+    setSpecsForm(specsToFormData(product.specs || {}));
+  };
 
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [page]);
 
   const loadProducts = async () => {
     try {
       setLoading(true);
       setNotFound(false);
       const [productsRes, categoriesRes] = await Promise.all([
-        api.get('/api/v1/admin/products'), // Backend tự động include images
+        api.get(`/api/v1/admin/products?page=${page}&limit=${limit}`),
         api.get('/api/v1/admin/categories')
       ]);
       setProducts(productsRes.data.data || []);
+      const meta = productsRes.data.pagination;
+      if (meta) setTotalPages(meta.totalPages || 1);
       setCategories(categoriesRes.data.data || []);
-    } catch (error) {
+    } catch {
       setNotFound(true);
     } finally {
       setLoading(false);
@@ -106,18 +119,34 @@ export default function ProductsPage() {
     e.preventDefault();
 
     try {
+      // Build specs JSONB — chỉ lấy field có giá trị
+      const specs: Record<string, string> = {};
+      for (const [key, val] of Object.entries(specsForm)) {
+        if (val && val.trim() !== '') specs[key] = val.trim();
+      }
+
+      // Tự động sinh description từ specs
+      const autoDesc = generateAutoDescription(itemForm, specsForm);
+
       const productData: Record<string, unknown> = {
         name: itemForm.name,
         sku: itemForm.sku,
         slug: itemForm.slug,
         stockQuantity: itemForm.stockQuantity || 0,
         price: Number(itemForm.price),
-        categoryId: itemForm.categoryId|| undefined,
-        description: itemForm.description || undefined,
-        size: itemForm.size || undefined,
-        rimDiameter: itemForm.rimDiameter ? Number(itemForm.rimDiameter) : undefined,
-        loadIndex: itemForm.loadIndex || undefined,
-        speedRating: itemForm.speedRating || undefined,
+        categoryId: itemForm.categoryId || undefined,
+
+        // Signature fields
+        brand: itemForm.brand || '',
+        size: itemForm.size || '',
+        sizeType: itemForm.sizeType || 'METRIC',
+        pattern: itemForm.pattern || undefined,
+        productType: itemForm.productType,
+        hasTube: itemForm.hasTube ?? null,
+
+        // Specs + auto description
+        specs,
+        description: autoDesc,
       };
 
       // Chỉ gửi ảnh khi user thực sự upload ảnh mới
@@ -132,17 +161,20 @@ export default function ProductsPage() {
         await api.post('/api/v1/admin/products', productData);
       }
 
+      setSpecsForm(initialSpecs);
       setImageChanged(false);
       setItemForm(emptyProduct);
       setIsFormOpen(false);
       await loadProducts();
-    } catch (error) {
+    } catch {
+      // silent
     }
   };
 
   const handleEdit = (product: Product) => {
     setImageChanged(false);
     setItemForm({ ...product });
+    loadSpecsFromProduct(product);
     setIsFormOpen(true);
   };
 
@@ -256,16 +288,18 @@ export default function ProductsPage() {
                         <div className="flex flex-col items-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl px-5 py-3 border border-gray-200 min-w-[90px]">
                           <Ruler size={16} className="text-gray-400 mb-1" />
                           <span className="font-black text-sm text-gray-900 leading-none">{p.size || '—'}</span>
-                          <span className="text-[8px] font-bold text-gray-400 uppercase mt-1">Size (inch)</span>
+                          <span className="text-[8px] font-bold text-gray-400 uppercase mt-1">Size</span>
                         </div>
                         <div className="flex flex-col items-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl px-5 py-3 border border-gray-200 min-w-[90px]">
-                          <Maximize2 size={14} className="text-gray-400 mb-1" />
-                          <span className="font-black text-sm text-gray-900 leading-none">{p.rimDiameter ? `${p.rimDiameter}"` : '—'}</span>
-                          <span className="text-[8px] font-bold text-gray-400 uppercase mt-1">ĐK Vành</span>
+                          <Ruler size={14} className="text-gray-400 mb-1" />
+                          <span className="font-black text-sm text-gray-900 leading-none">{p.brand || '—'}</span>
+                          <span className="text-[8px] font-bold text-gray-400 uppercase mt-1">Thương hiệu</span>
                         </div>
                       </div>
-                      <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                      <div className="flex gap-2 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
                         SKU: <span className="text-gray-700">{p.sku || '—'}</span>
+                        <span className="text-gray-300">|</span>
+                        Pattern: <span className="text-gray-700">{p.pattern || '—'}</span>
                       </div>
                     </div>
                   </td>
@@ -273,14 +307,14 @@ export default function ProductsPage() {
                     <div className="flex flex-col items-center gap-2">
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center bg-amber-50 rounded-2xl px-5 py-3 border border-amber-200 min-w-[80px]">
-                          <Weight size={16} className="text-amber-500 mb-1" />
-                          <span className="font-black text-base text-amber-700 leading-none">{p.loadIndex || '—'}</span>
-                          <span className="text-[8px] font-bold text-amber-500 uppercase mt-1">Tải (kg)</span>
+                          <Database size={16} className="text-amber-500 mb-1" />
+                          <span className="font-black text-base text-amber-700 leading-none">{p.productType ? (p.productType === 'motorcycle_tire' ? 'Lốp xe máy' : p.productType === 'bicycle_tire' ? 'Lốp xe đạp' : p.productType === 'motorcycle_tube' ? 'Săm xe máy' : 'Săm xe đạp') : '—'}</span>
+                          <span className="text-[8px] font-bold text-amber-500 uppercase mt-1">Loại SP</span>
                         </div>
                         <div className="flex flex-col items-center bg-blue-50 rounded-2xl px-5 py-3 border border-blue-200 min-w-[80px]">
-                          <Gauge size={16} className="text-blue-500 mb-1" />
-                          <span className="font-black text-base text-blue-700 leading-none">{p.speedRating || '—'}</span>
-                          <span className="text-[8px] font-bold text-blue-500 uppercase mt-1">Tốc độ (km/h)</span>
+                          <Info size={16} className="text-blue-500 mb-1" />
+                          <span className="font-black text-base text-blue-700 leading-none">{p.hasTube !== null ? (p.hasTube ? 'Có săm' : 'Không săm') : '—'}</span>
+                          <span className="text-[8px] font-bold text-blue-500 uppercase mt-1">Săm</span>
                         </div>
                       </div>
                     </div>
@@ -311,6 +345,44 @@ export default function ProductsPage() {
           )}
         </div>
       </div>
+
+      {/* PHÂN TRANG */}
+      {totalPages > 1 && (
+        <div className="max-w-7xl mx-auto mt-6 flex items-center justify-between bg-white rounded-3xl shadow-lg border border-gray-100 px-6 py-4">
+          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            Trang {page} / {totalPages}
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-6 py-3 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed rounded-2xl font-black text-xs uppercase tracking-wider transition-all"
+            >
+              ← Trước
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${
+                  p === page
+                    ? 'bg-red-600 text-white shadow-lg shadow-red-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-6 py-3 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed rounded-2xl font-black text-xs uppercase tracking-wider transition-all"
+            >
+              Sau →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* MODAL FORM (THÊM / SỬA) */}
       {isFormOpen && (
@@ -386,42 +458,207 @@ export default function ProductsPage() {
                 </div>
               </div>
 
-              {/* Row 3: Technical Specs Box */}
+              {/* Row 3: Signature + Specs Box */}
               <div className="p-10 bg-red-50/20 rounded-[50px] border-2 border-red-50 space-y-8 shadow-inner relative">
                 <div className="absolute top-6 right-10 flex gap-2">
                    <Zap size={16} className="text-red-600 animate-pulse" />
                    <Wind size={16} className="text-blue-500 animate-pulse" />
                 </div>
                 <h4 className="text-xs font-black uppercase text-red-600 flex items-center gap-3 border-b-2 border-red-100 pb-4 italic">
-                  <Info size={16} /> Thông số kỹ thuật chuyên dụng
+                  <Info size={16} /> Thông số định danh sản phẩm
                 </h4>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
                   <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Thương hiệu</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.brand || ''} onChange={e => setItemForm({...itemForm, brand: e.target.value})} placeholder="DPLUS, DRC..." />
+                  </div>
+                  <div className="space-y-2">
                     <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Kích cỡ</label>
-                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.size || ''} onChange={e => setItemForm({...itemForm, size: e.target.value})} />
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.size || ''} onChange={e => setItemForm({...itemForm, size: e.target.value})} placeholder="120/70-17" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Đường kính vành</label>
-                    <input type="number" className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.rimDiameter ?? ''} onChange={e => setItemForm({...itemForm, rimDiameter: e.target.value ? Number(e.target.value) : undefined})} />
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Kiểu hoa (Pattern)</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.pattern || ''} onChange={e => setItemForm({...itemForm, pattern: e.target.value})} placeholder="D354, 119..." />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Chỉ số tải</label>
-                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.loadIndex || ''} onChange={e => setItemForm({...itemForm, loadIndex: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Tốc độ tối đa</label>
-                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.speedRating || ''} onChange={e => setItemForm({...itemForm, speedRating: e.target.value})} />
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Loại sản phẩm</label>
+                    <select className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.productType} onChange={e => setItemForm({...itemForm, productType: e.target.value as Product['productType']})}>
+                      <option value="motorcycle_tire">Lốp xe máy</option>
+                      <option value="bicycle_tire">Lốp xe đạp</option>
+                      <option value="motorcycle_tube">Săm xe máy</option>
+                      <option value="bicycle_tube">Săm xe đạp</option>
+                    </select>
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Hệ size</label>
+                    <select className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.sizeType || 'METRIC'} onChange={e => setItemForm({...itemForm, sizeType: e.target.value as Product['sizeType']})}>
+                      <option value="METRIC">Metric</option>
+                      <option value="INCH">Inch</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Có săm?</label>
+                    <select className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-red-600 outline-none" value={itemForm.hasTube === undefined ? '' : itemForm.hasTube ? 'true' : 'false'} onChange={e => {
+                      const val = e.target.value;
+                      setItemForm({...itemForm, hasTube: val === '' ? undefined : val === 'true'});
+                    }}>
+                      <option value="">Không áp dụng</option>
+                      <option value="true">Có săm (Tube-type)</option>
+                      <option value="false">Không săm (Tubeless)</option>
+                    </select>
+                  </div>
+                </div>
 
+                <h4 className="text-xs font-black uppercase text-blue-600 flex items-center gap-3 border-b-2 border-blue-100 pb-4 italic mt-10">
+                  <Info size={16} /> Thông số kỹ thuật chuyên sâu
+                </h4>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Nhóm lốp</label>
+                    <select className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.nhom_lop} onChange={e => setSpecsForm({...specsForm, nhom_lop: e.target.value})}>
+                      <option value="Motorcycle">Motorcycle</option>
+                      <option value="Scooter">Scooter</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Dòng series</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.dong_series} onChange={e => setSpecsForm({...specsForm, dong_series: e.target.value})} placeholder="D602, X01..." />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Cấu trúc lốp</label>
+                    <select className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.cau_truc_lop} onChange={e => setSpecsForm({...specsForm, cau_truc_lop: e.target.value})}>
+                      <option value="Millimetric">Millimetric</option>
+                      <option value="Normal">Normal</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Phân loại tải</label>
+                    <select className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.phan_loai_tai} onChange={e => setSpecsForm({...specsForm, phan_loai_tai: e.target.value})}>
+                      <option value="SV">SV (Standard)</option>
+                      <option value="EV">EV (Extra)</option>
+                      <option value="LV">LV (Light)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Đường kính vành (&quot;)</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.duong_kinh_vanh} onChange={e => setSpecsForm({...specsForm, duong_kinh_vanh: e.target.value})} placeholder="17" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Rộng vành tiêu chuẩn (&quot;)</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.rong_vanh_tieu_chuan} onChange={e => setSpecsForm({...specsForm, rong_vanh_tieu_chuan: e.target.value})} placeholder="1.85" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Rộng vành thích hợp (&quot;)</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.rong_vanh_thich_hop} onChange={e => setSpecsForm({...specsForm, rong_vanh_thich_hop: e.target.value})} placeholder="1.60-2.15" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Đường kính ngoài (mm)</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.duong_kinh_ngoai} onChange={e => setSpecsForm({...specsForm, duong_kinh_ngoai: e.target.value})} placeholder="627" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Chiều rộng toàn bộ (mm)</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.chieu_rong_toan_bo} onChange={e => setSpecsForm({...specsForm, chieu_rong_toan_bo: e.target.value})} placeholder="110" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Chiều sâu hoa (mm)</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.chieu_sau_hoa} onChange={e => setSpecsForm({...specsForm, chieu_sau_hoa: e.target.value})} placeholder="8" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Số lớp bố</label>
+                    <select className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.so_lop_bo} onChange={e => setSpecsForm({...specsForm, so_lop_bo: e.target.value})}>
+                      <option value="4PR">4PR</option>
+                      <option value="2PR">2PR</option>
+                      <option value="6PR">6PR</option>
+                      <option value="8PR">8PR</option>
+                      <option value="10PR">10PR</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Chỉ số tải &amp; tốc độ</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.chi_so_tai_toc_do} onChange={e => setSpecsForm({...specsForm, chi_so_tai_toc_do: e.target.value})} placeholder="52P" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Tải trọng lớn nhất (kg)</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.tai_trong_lon_nhat} onChange={e => setSpecsForm({...specsForm, tai_trong_lon_nhat: e.target.value})} placeholder="200" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Nội áp tiêu chuẩn (kPa)</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.noi_ap_tieu_chuan} onChange={e => setSpecsForm({...specsForm, noi_ap_tieu_chuan: e.target.value})} placeholder="280" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Tốc độ tối đa (km/h)</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.toc_do_toi_da} onChange={e => setSpecsForm({...specsForm, toc_do_toi_da: e.target.value})} placeholder="150" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Van</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.van} onChange={e => setSpecsForm({...specsForm, van: e.target.value})} placeholder="TR87, TR4..." />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2 tracking-widest italic font-bold">Trọng lượng (g)</label>
+                    <input className="w-full p-3 bg-white border-2 border-transparent rounded-xl font-black italic text-xs shadow-sm focus:border-blue-600 outline-none" value={specsForm.trong_luong} onChange={e => setSpecsForm({...specsForm, trong_luong: e.target.value})} placeholder="150" />
+                  </div>
+                </div>
               </div>
 
-              {/* Description */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 ml-8 tracking-widest italic font-bold">Mô tả chi tiết & Ghi chú</label>
-                <textarea rows={4} placeholder="Nhập ưu điểm, cấu tạo lốp..." className="w-full p-8 bg-gray-50 rounded-[40px] outline-none focus:ring-4 focus:ring-red-100 font-bold text-xs italic shadow-inner border-2 border-transparent focus:border-red-100 transition-all" value={itemForm.description} onChange={e => setItemForm({...itemForm, description: e.target.value})} />
+              {/* ── Mô tả tự động từ thông số kỹ thuật ── */}
+              <div className="bg-gradient-to-br from-gray-50 to-white rounded-[40px] border-2 border-gray-200 p-8 space-y-4 shadow-inner">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black uppercase text-gray-500 flex items-center gap-3 italic tracking-wider">
+                    <Zap size={16} className="text-amber-500" /> Mô tả tự động
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const desc = generateAutoDescription(itemForm, specsForm);
+                      setItemForm(prev => ({ ...prev, description: desc }));
+                    }}
+                    className="text-[9px] font-black uppercase text-amber-600 bg-amber-50 hover:bg-amber-100 px-4 py-2 rounded-full transition-all tracking-wider italic"
+                  >
+                    Sinh mô tả
+                  </button>
+                </div>
+                <div className="bg-white rounded-3xl p-6 border border-gray-100 min-h-[80px] shadow-sm">
+                  {(() => {
+                    const desc = generateAutoDescription(itemForm, specsForm);
+                    const lines = desc.split('\n');
+                    return lines.length > 1 ? (
+                      <>
+                        <p className="font-black text-gray-900 text-base italic leading-tight mb-3">{lines[0]}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {lines[1].split(' | ').map((item, idx) => (
+                            <span key={idx} className="text-[10px] font-bold text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 italic">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-gray-400 text-sm italic font-medium">{desc || 'Chưa có thông số — mô tả sẽ tự động được tạo'}</p>
+                    );
+                  })()}
+                </div>
+                {itemForm.description && (
+                  <p className="text-[9px] text-green-600 font-bold italic flex items-center gap-2">
+                    ✓ Đã lưu mô tả (bấm &quot;Sinh mô tả&quot; để cập nhật)
+                  </p>
+                )}
               </div>
             </form>
 
@@ -433,6 +670,7 @@ export default function ProductsPage() {
                   setImageChanged(false);
                   setIsFormOpen(false);
                   setItemForm(emptyProduct);
+                  setSpecsForm(initialSpecs);
                 }}
                 className="flex-1 py-6 bg-white text-gray-400 border border-gray-200 rounded-[30px] font-black uppercase tracking-widest text-[11px] hover:bg-gray-100 transition-all active:scale-95 shadow-sm shadow-gray-100"
               >

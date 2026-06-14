@@ -3,26 +3,32 @@ import { ProductImage } from './productImage';
 
 export interface Product {
   id: string;
-  categoryId: string;
+  categoryId?: string;
 
+  // Signature
+  brand: string;
+  size: string;
+  sizeType?: 'METRIC' | 'INCH';
+  pattern?: string;
+
+  // Product type
+  productType: 'motorcycle_tire' | 'bicycle_tire' | 'motorcycle_tube' | 'bicycle_tube';
+
+  // Core
   sku: string;
   name: string;
   slug: string;
-  description?: string;
-
   price: number;
   salePrice?: number;
   stockQuantity: number;
-
-  size?: string;
-  rimDiameter?: number;
-  loadIndex?: string;
-  speedRating?: string;
-
-  aiLabel?: string;
-
-  // Thông số kỹ thuật chi tiết
+  hasTube?: boolean;
   isActive: boolean;
+  imageUrl?: string;
+
+  // Specs (admin nhập → sinh description tự động)
+  specs?: Record<string, unknown>;
+  description?: string;
+
   createdAt: string;
   updatedAt: string;
 
