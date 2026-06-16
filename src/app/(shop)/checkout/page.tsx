@@ -60,6 +60,8 @@ export default function CheckoutPage() {
       setUploadError('File không quá 5MB');
       return;
     }
+
+    // Hiện tên file liền, không chờ load
     setPaymentImage(file);
     setUploadError(null);
   };

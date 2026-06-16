@@ -1,6 +1,12 @@
+'use client';
+import { usePathname } from 'next/navigation';
 import { MapPin, Phone, Share , Play , Globe, Mail, ShieldCheck } from "lucide-react";
 
 export function Footer() {
+  const pathname = usePathname();
+  // Ẩn Footer khi là admin
+  if (pathname?.startsWith('/admin')) return null;
+
   return (
       <footer className="bg-gray-900 text-white pt-16 pb-8">
     <div className="container mx-auto px-4">

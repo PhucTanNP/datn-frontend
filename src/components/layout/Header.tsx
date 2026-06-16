@@ -13,8 +13,9 @@ export function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const isAdmin = user?.role === 'admin';
   // Ẩn cart khi ở trang products (shop routes)
-  const hideCart = pathname?.startsWith('/products') || pathname?.startsWith('/checkout');
+  const hideCart = pathname?.startsWith('/products') || pathname?.startsWith('/checkout') || isAdmin;
 
   useEffect(() => {
     initialize().catch(console.error);
@@ -31,7 +32,7 @@ export function Header() {
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-      {/* Top bar */}
+      {!isAdmin && (
       <div className="bg-red-600 text-white py-1 text-xs sm:text-sm px-4 flex justify-between items-center font-medium">
         <div className="flex gap-2 sm:gap-4">
           <a href="tel:0905033776" className="flex items-center gap-1 hover:underline">
@@ -44,6 +45,7 @@ export function Header() {
           <img src="https://flagcdn.com/w20/vn.png" alt="VN" className="w-4 h-3 sm:w-5 sm:h-3 object-cover shadow-sm" />
         </div>
       </div>
+      )}
 
       {/* Main nav */}
       <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
@@ -55,7 +57,7 @@ export function Header() {
           </div>
         </Link>
 
-        {/* Desktop nav */}
+        {!isAdmin && (
         <nav className="hidden lg:flex items-center gap-8 xl:gap-10">
           {navItems.map((item) => (
             <Link
@@ -72,6 +74,7 @@ export function Header() {
             </Link>
           ))}
         </nav>
+        )}
 
         {/* Right section */}
         <div className="flex items-center gap-2 sm:gap-4">
@@ -136,7 +139,7 @@ export function Header() {
           {/* Menu panel */}
           <div className="absolute top-full left-0 right-0 bg-white border-t border-gray-100 shadow-xl z-50 lg:hidden animate-slide-down">
             <div className="px-4 py-4 space-y-1">
-              {navItems.map((item) => (
+              {!isAdmin && navItems.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
