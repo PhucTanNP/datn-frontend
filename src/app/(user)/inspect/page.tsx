@@ -5,22 +5,48 @@ import api from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { 
-  Camera, Upload, Shield, AlertTriangle, CheckCircle2, 
+  Camera, Upload, Shield, CheckCircle2,
   ArrowRight, Brain, Zap, BarChart3, Sparkles
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
+interface StepDetail {
+  step: number;
+  name: string;
+  status: string; // "ok" | "error"
+  detail: string;
+  image?: string; // base64 data URI
+  crops?: Array<{class: string; image: string}>;
+  detect_input_image?: string;
+}
+
+interface OcrDetail {
+  raw_text: string;
+  normalized_text: string;
+  ocr_confidence: number;
+  yolo_confidence: number;
+  crop_image?: string;
+  ocr_input_image?: string;
+}
+
 interface InspectionResult {
-  wear_level: string;
-  wear_percentage: number;
-  tire_type_detected: string;
-  crack_detected: boolean;
-  crack_severity: string;
-  crack_locations: Array<{x: number, y: number, confidence: number}>;
-  confidence: number;
-  recommendation: string;
+  brand: string | null;
+  size: string | null;
+  pattern: string | null;
+  brand_raw: string | null;
+  size_raw: string | null;
+  pattern_raw: string | null;
+  brand_ocr?: OcrDetail;
+  size_ocr?: OcrDetail;
+  pattern_ocr?: OcrDetail;
+  ocr_confidence: number;
+  yolo_confidence: number;
+  detections_count: number;
   image_url: string;
+  saved: boolean;
+  steps?: StepDetail[];
+  ai_raw_result?: { steps?: StepDetail[] };
   suggested_products?: Array<{id: string; name: string; price: number; sale_price?: number; slug: string}>;
 }
 
@@ -56,16 +82,6 @@ export default function TechnologyPage() {
     }
   };
 
-  const getWearColor = (level: string) => {
-    const map: Record<string, string> = {
-      new: 'text-green-600 bg-green-50 border-green-200',
-      good: 'text-blue-600 bg-blue-50 border-blue-200',
-      warning: 'text-yellow-600 bg-yellow-50 border-yellow-200',
-      critical: 'text-red-600 bg-red-50 border-red-200',
-    };
-    return map[level] || 'text-gray-600 bg-gray-50 border-gray-200';
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Hero Section */}
@@ -82,8 +98,8 @@ export default function TechnologyPage() {
               <span className="block text-red-200">bằng trí tuệ nhân tạo</span>
             </h1>
             <p className="text-lg text-red-100 max-w-xl mx-auto">
-              Chỉ cần chụp ảnh lốp xe, AI sẽ phân tích độ mòn, phát hiện vết nứt 
-              và đưa ra khuyến nghị chính xác trong vài giây.
+              Chỉ cần chụp ảnh lốp xe, AI sẽ nhận diện thương hiệu, kích cỡ 
+              và mã gai trong vài giây.
             </p>
           </div>
         </div>
@@ -94,9 +110,9 @@ export default function TechnologyPage() {
       <section className="container mx-auto px-4 -mt-8 relative z-10 mb-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { icon: Brain, title: 'AI Thông Minh', desc: 'Phân tích hơn 1000 mẫu lốp với độ chính xác 95%' },
-            { icon: Zap, title: 'Kết quả tức thì', desc: 'Nhận kết quả kiểm tra chỉ sau 5-10 giây' },
-            { icon: BarChart3, title: 'Báo cáo chi tiết', desc: 'Đánh giá độ mòn, vết nứt và khuyến nghị thay thế' },
+            { icon: Brain, title: 'AI Thông Minh', desc: 'Nhận diện thương hiệu lốp DRC, DPLUS và các thông số' },
+            { icon: Zap, title: 'Kết quả tức thì', desc: 'Nhận kết quả kiểm tra chỉ sau 15-30 giây' },
+            { icon: BarChart3, title: 'Báo cáo chi tiết', desc: 'Thương hiệu, kích cỡ và mã gai kèm độ tin cậy' },
           ].map((feature, i) => (
             <Card key={i} className="border-0 shadow-lg shadow-gray-200/50 bg-white/90 backdrop-blur-sm">
               <CardContent className="p-6 flex items-start gap-4">
@@ -175,7 +191,7 @@ export default function TechnologyPage() {
                   <Shield size={64} className="mx-auto text-gray-200 mb-4" />
                   <h3 className="text-xl font-bold text-gray-400 mb-2">Chờ kết quả...</h3>
                   <p className="text-gray-400 text-sm">
-                    Tải ảnh lên và nhấn "Phân tích bằng AI" để kiểm tra lốp xe của bạn
+                    Tải ảnh lên và nhấn Phân tích bằng AI để kiểm tra lốp xe của bạn
                   </p>
                 </CardContent>
               </Card>
@@ -195,41 +211,180 @@ export default function TechnologyPage() {
               <div className="space-y-4">
                 <Card className="bg-white border-green-100">
                   <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className={`px-3 py-1 rounded-full text-sm font-bold border ${getWearColor(result.wear_level)}`}>
-                        {result.wear_level === 'new' ? 'MỚI' : result.wear_level === 'good' ? 'TỐT' : result.wear_level === 'warning' ? 'CẢNH BÁO' : 'NGUY KỊCH'}
-                      </div>
-                      <span className="text-sm text-gray-400">Độ chính xác: {(result.confidence * 100).toFixed(0)}%</span>
+                    <div className="flex items-center gap-2 mb-4">
+                      <CheckCircle2 size={20} className="text-green-600" />
+                      <span className="text-lg font-bold text-gray-900">Kết quả nhận dạng</span>
+                      {result.detections_count > 0 && (
+                        <span className="text-xs text-gray-400 ml-auto">
+                          {result.detections_count} vùng phát hiện
+                        </span>
+                      )}
                     </div>
 
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                        <span className="text-gray-500">Độ mòn</span>
-                        <span className="font-bold text-gray-900">{result.wear_percentage}%</span>
+                      {/* Brand */}
+                      <div className="flex justify-between items-center py-3 border-b border-gray-50">
+                        <span className="text-gray-500">Thương hiệu (Brand)</span>
+                        <div className="text-right">
+                          <div className="font-bold text-gray-900 text-lg">
+                            {result.brand || <span className="text-gray-400">—</span>}
+                          </div>
+                          {result.brand_raw && result.brand_raw !== result.brand && (
+                            <div className="text-xs text-gray-400">raw: {result.brand_raw}</div>
+                          )}
+                          {result.brand_ocr?.crop_image && (
+                            <div className="mt-1 flex justify-end gap-1">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={result.brand_ocr.crop_image} alt="brand crop" className="h-10 rounded border" title="Crop gốc" />
+                              {result.brand_ocr?.ocr_input_image && (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img src={result.brand_ocr.ocr_input_image} alt="brand ocr input" className="h-10 rounded border" title="Đầu vào OCR (48×320)" />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                        <span className="text-gray-500">Loại lốp</span>
-                        <span className="font-bold text-gray-900">{result.tire_type_detected}</span>
+                      {/* Size */}
+                      <div className="flex justify-between items-center py-3 border-b border-gray-50">
+                        <span className="text-gray-500">Kích cỡ (Size)</span>
+                        <div className="text-right">
+                          <div className="font-bold text-gray-900 text-lg">
+                            {result.size || <span className="text-gray-400">—</span>}
+                          </div>
+                          {result.size_raw && result.size_raw !== result.size && (
+                            <div className="text-xs text-gray-400">raw: {result.size_raw}</div>
+                          )}
+                          {result.size_ocr?.crop_image && (
+                            <div className="mt-1 flex justify-end gap-1">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={result.size_ocr.crop_image} alt="size crop" className="h-10 rounded border" title="Crop gốc" />
+                              {result.size_ocr?.ocr_input_image && (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img src={result.size_ocr.ocr_input_image} alt="size ocr input" className="h-10 rounded border" title="Đầu vào OCR (48×320)" />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                        <span className="text-gray-500">Phát hiện nứt</span>
-                        {result.crack_detected ? (
-                          <span className="font-bold text-red-600 flex items-center gap-1">
-                            <AlertTriangle size={16} /> Có
-                          </span>
-                        ) : (
-                          <span className="font-bold text-green-600 flex items-center gap-1">
-                            <CheckCircle2 size={16} /> Không
-                          </span>
-                        )}
+                      {/* Pattern */}
+                      <div className="flex justify-between items-center py-3 border-b border-gray-50">
+                        <span className="text-gray-500">Mã gai (Pattern)</span>
+                        <div className="text-right">
+                          <div className="font-bold text-gray-900 text-lg">
+                            {result.pattern || <span className="text-gray-400">—</span>}
+                          </div>
+                          {result.pattern_raw && result.pattern_raw !== result.pattern && (
+                            <div className="text-xs text-gray-400">raw: {result.pattern_raw}</div>
+                          )}
+                          {result.pattern_ocr?.crop_image && (
+                            <div className="mt-1 flex justify-end gap-1">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={result.pattern_ocr.crop_image} alt="pattern crop" className="h-10 rounded border" title="Crop gốc" />
+                              {result.pattern_ocr?.ocr_input_image && (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img src={result.pattern_ocr.ocr_input_image} alt="pattern ocr input" className="h-10 rounded border" title="Đầu vào OCR (48×320)" />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="mt-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl">
-                      <p className="text-sm font-medium text-gray-800">{result.recommendation}</p>
-                    </div>
+                    {result.ocr_confidence > 0 && (
+                      <div className="mt-4 flex items-center gap-2 text-sm flex-wrap">
+                        <span className="text-gray-400">Độ tin cậy:</span>
+                        <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${
+                          result.ocr_confidence >= 0.8 ? 'bg-green-100 text-green-800' :
+                          result.ocr_confidence >= 0.5 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          OCR: {Math.round(result.ocr_confidence * 100)}%
+                        </span>
+                        {result.yolo_confidence > 0 && (
+                          <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${
+                            result.yolo_confidence >= 0.8 ? 'bg-green-100 text-green-800' :
+                            result.yolo_confidence >= 0.5 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            YOLO: {Math.round(result.yolo_confidence * 100)}%
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
+
+                {/* Steps Timeline with images */}
+                {(result.steps || result.ai_raw_result?.steps) && (
+                  <Card className="bg-white border-gray-100">
+                    <CardContent className="p-6">
+                      <h4 className="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wider text-gray-500">
+                        📋 Các bước xử lý
+                      </h4>
+                      <div className="space-y-6">
+                        {(result.steps || result.ai_raw_result?.steps || []).map((s, i) => (
+                          <div key={i} className="flex gap-4">
+                            {/* Timeline dot + line */}
+                            <div className="flex flex-col items-center">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                                s.status === 'ok' ? 'bg-green-500' : 'bg-red-500'
+                              }`}>
+                                {s.status === 'ok' ? '✓' : '✗'}
+                              </div>
+                              {i < (result.steps || result.ai_raw_result?.steps || []).length - 1 && (
+                                <div className="w-0.5 flex-1 bg-gray-200 mt-1 min-h-[8px]" />
+                              )}
+                            </div>
+                            {/* Content */}
+                            <div className="flex-1 pb-4 min-w-0">
+                              <div className="font-semibold text-sm text-gray-900 mb-1">
+                                Bước {s.step}: {s.name}
+                              </div>
+                              {s.detail && (
+                                <div className="text-xs text-gray-500 mb-2 font-mono">
+                                  {s.detail}
+                                </div>
+                              )}
+                              {s.image && (
+                                <div className="relative w-full max-w-md rounded-xl overflow-hidden border border-gray-200 bg-gray-50 mb-2">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={s.image}
+                                    alt={`Step ${s.step}`}
+                                    className="w-full h-auto object-contain max-h-48"
+                                  />
+                                </div>
+                              )}
+                              {/* Crops for step 4 */}
+                              {s.crops && s.crops.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {s.crops.map((c, ci) => (
+                                    <div key={ci} className="text-center">
+                                      <div className="text-xs font-medium text-gray-500 mb-1 uppercase">{c.class}</div>
+                                      <div className="rounded-lg overflow-hidden border border-gray-200 inline-block">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={c.image} alt={c.class} className="h-16 w-auto" />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {s.detect_input_image && (
+                                <div className="mt-2">
+                                  <div className="text-xs font-medium text-gray-500 mb-1">Ảnh đầu vào YOLO detect (resized 1280px)</div>
+                                  <div className="rounded-lg overflow-hidden border border-gray-200 inline-block">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={s.detect_input_image} alt="yolo detect input" className="h-20 w-auto" />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Suggested Products */}
                 {result.suggested_products && result.suggested_products.length > 0 && (
