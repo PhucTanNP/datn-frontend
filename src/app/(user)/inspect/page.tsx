@@ -392,7 +392,7 @@ export default function TechnologyPage() {
                     <CardContent className="p-6">
                       <h4 className="font-bold text-gray-900 mb-3">🛞 Sản phẩm gợi ý</h4>
                       <div className="space-y-2">
-                        {result.suggested_products.map((p: any) => (
+                        {result.suggested_products.map((p) => (
                           <Link key={p.id} href={`/products/${p.slug}`}
                             className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-red-50 transition-colors group"
                           >
