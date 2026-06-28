@@ -469,10 +469,6 @@ return (
                       <span className="font-bold text-gray-800">{Number(selectedOrder?.subtotal ?? 0).toLocaleString()}đ</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-gray-50">
-                      <span className="text-gray-400 font-bold">Giảm giá:</span>
-                      <span className="font-bold text-green-600">-{Number(selectedOrder?.discount_amount ?? 0).toLocaleString()}đ</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-gray-50">
                       <span className="text-gray-400 font-bold">Phí vận chuyển:</span>
                       <span className="font-bold text-gray-800">{Number(selectedOrder?.shipping_fee ?? 0).toLocaleString()}đ</span>
                     </div>
