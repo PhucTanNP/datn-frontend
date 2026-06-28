@@ -40,7 +40,7 @@ export default function DashboardPage() {
   };
 
   // Stats calculation
-  const totalRevenue = orders.reduce((s, o) => s + (o.status === 'delivered' ? o.total_amount : 0), 0);
+  const totalRevenue = orders.reduce((s, o) => s + (o.status === 'confirmed' ? o.total_amount : 0), 0);
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
 
   if (loading) {

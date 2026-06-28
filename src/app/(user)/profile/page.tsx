@@ -278,13 +278,8 @@ export default function ProfilePage() {
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   pending:           { label: 'Chờ xác nhận',  color: 'bg-amber-50 text-amber-700 border-amber-200',      icon: <Clock size={14} /> },
-  awaiting_payment:  { label: 'Chờ thanh toán', color: 'bg-orange-50 text-orange-700 border-orange-200',   icon: <CreditCard size={14} /> },
-  paid_confirmed:    { label: 'Đã thanh toán',  color: 'bg-indigo-50 text-indigo-700 border-indigo-200',   icon: <CheckCircle size={14} /> },
-  processing:        { label: 'Đang xử lý',     color: 'bg-blue-50 text-blue-700 border-blue-200',         icon: <Package size={14} /> },
-  shipped:           { label: 'Đang giao',      color: 'bg-cyan-50 text-cyan-700 border-cyan-200',         icon: <Truck size={14} /> },
-  delivered:         { label: 'Đã giao',        color: 'bg-green-50 text-green-700 border-green-200',      icon: <CheckCircle size={14} /> },
-  cancelled:         { label: 'Đã hủy',         color: 'bg-red-50 text-red-700 border-red-200',           icon: <Ban size={14} /> },
-  refunded:          { label: 'Đã hoàn tiền',   color: 'bg-purple-50 text-purple-700 border-purple-200',   icon: <CreditCard size={14} /> },
+  confirmed:         { label: 'Đã xác nhận',   color: 'bg-green-50 text-green-700 border-green-200',       icon: <CheckCircle size={14} /> },
+  cancelled:         { label: 'Đã hủy',        color: 'bg-red-50 text-red-700 border-red-200',            icon: <Ban size={14} /> },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -445,17 +440,36 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
           {/* Timeline */}
           <div className="bg-gray-50 rounded-3xl p-6 space-y-3">
             <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center"><Package size={14} className="text-white" /></div>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                order.status === 'cancelled' ? 'bg-red-500' : 'bg-green-500'
+              }`}>
+                <Package size={14} className="text-white" />
+              </div>
               <div>
-                <p className="text-xs font-bold text-gray-900">Đặt hàng thành công</p>
+                <p className="text-xs font-bold text-gray-900">Đã đặt hàng</p>
                 <p className="text-[10px] text-gray-400">{formatDate(order.created_at)}</p>
               </div>
             </div>
-            {order.status === 'delivered' && (
+
+            {/* Đã hủy */}
+            {order.status === 'cancelled' && (
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-full bg-red-500 flex items-center justify-center"><X size={14} className="text-white" /></div>
+                <div>
+                  <p className="text-xs font-bold text-red-600">Đơn hàng đã bị hủy</p>
+                  {order.cancel_reason && (
+                    <p className="text-[11px] text-red-500 italic">Lý do: {order.cancel_reason}</p>
+                  )}
+                  <p className="text-[10px] text-gray-400">{formatDate(order.updated_at)}</p>
+                </div>
+              </div>
+            )}
+
+            {order.status === 'confirmed' && (
               <div className="flex items-center gap-3">
                 <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center"><CheckCircle size={14} className="text-white" /></div>
                 <div>
-                  <p className="text-xs font-bold text-gray-900">Giao hàng thành công</p>
+                  <p className="text-xs font-bold text-gray-900">Đã xác nhận</p>
                   <p className="text-[10px] text-gray-400">{formatDate(order.updated_at)}</p>
                 </div>
               </div>

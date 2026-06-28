@@ -97,7 +97,7 @@ export default function CheckoutPage() {
   if (loading) return <Loading />;
 
   return (
-       <div className="min-h-screen bg-slate-50 font-sans pb-20 italic">
+       <div className="min-h-screen bg-slate-50 pb-20 italic">
       <main className="max-w-6xl mx-auto px-6 py-10">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-black text-gray-900 uppercase italic">Thanh toán đơn hàng</h1>

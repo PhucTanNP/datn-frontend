@@ -216,7 +216,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="p-6 bg-[#f8f9fa] min-h-screen italic font-sans relative">
+    <div className="p-6 bg-[#f8f9fa] min-h-screen italic relative">
 
       {/* HEADER QUẢN TRỊ */}
       <div className="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-center gap-6">

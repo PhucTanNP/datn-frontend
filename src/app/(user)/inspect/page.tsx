@@ -316,13 +316,63 @@ export default function TechnologyPage() {
 
                 {/* Steps Timeline with images */}
                 {(result.steps || result.ai_raw_result?.steps) && (
-                  <Card className="bg-white border-gray-100">
-                    <CardContent className="p-6">
-                      <h4 className="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wider text-gray-500">
-                        📋 Các bước xử lý
-                      </h4>
-                      <div className="space-y-6">
-                        {(result.steps || result.ai_raw_result?.steps || []).map((s, i) => (
+                  <>
+                    {/* Segment visualization — nổi bật step 1 */}
+                    {(result.steps || result.ai_raw_result?.steps || []).filter(s => s.step === 1)[0]?.image && (
+                      <Card className="bg-white border-red-100 overflow-hidden">
+                        <CardContent className="p-0">
+                          <div className="bg-gradient-to-r from-red-600 to-red-500 px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold text-white">1</span>
+                              <span className="font-bold text-white text-sm">Phân đoạn lốp xe (Segmentation)</span>
+                              <span className="ml-auto bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
+                                {result.steps?.filter(s => s.step === 1)[0]?.status === 'ok' ? '✓ Thành công' : '✗ Lỗi'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="md:col-span-2">
+                                <div className="relative w-full rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={(result.steps || result.ai_raw_result?.steps || []).filter(s => s.step === 1)[0]?.image || ''}
+                                    alt="Phân đoạn lốp"
+                                    className="w-full h-auto object-contain max-h-64"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-2 text-sm">
+                                <div className="text-gray-500 font-medium">Chi tiết</div>
+                                <div className="font-mono text-xs bg-gray-50 p-2 rounded-lg text-gray-700 break-words">
+                                  {(result.steps || result.ai_raw_result?.steps || []).filter(s => s.step === 1)[0]?.detail || ''}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t border-gray-100">
+                                  <span className="w-3 h-3 rounded-full border-2 border-green-500" />
+                                  <span>Vòng tròn xanh = rìa ngoài lốp</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  <span className="w-3 h-3 bg-red-500 rounded-full" />
+                                  <span>Chấm đỏ = tâm lốp</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  <span className="w-3 h-3 bg-gray-800 rounded" />
+                                  <span>Nền đen = đã cách ly khỏi ảnh gốc</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    <Card className="bg-white border-gray-100">
+                      <CardContent className="p-6">
+                        <h4 className="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wider text-gray-500">
+                          📋 Chi tiết các bước xử lý
+                        </h4>
+                        <div className="space-y-6">
+                          {(result.steps || result.ai_raw_result?.steps || []).map((s, i) => (
                           <div key={i} className="flex gap-4">
                             {/* Timeline dot + line */}
                             <div className="flex flex-col items-center">
@@ -383,8 +433,7 @@ export default function TechnologyPage() {
                         ))}
                       </div>
                     </CardContent>
-                  </Card>
-                )}
+                  </Card>                </>                )}
 
                 {/* Suggested Products */}
                 {result.suggested_products && result.suggested_products.length > 0 && (

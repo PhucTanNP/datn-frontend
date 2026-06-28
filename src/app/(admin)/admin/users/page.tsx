@@ -100,7 +100,7 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="flex h-screen bg-[#f8f9fa] overflow-hidden italic font-sans relative">
+    <div className="flex h-screen bg-[#f8f9fa] overflow-hidden italic relative">
 
       {/* CỘT TRÁI: DANH SÁCH NGƯỜI DÙNG */}
       <div className={`flex-1 flex flex-col transition-all duration-500 ${isPanelOpen ? 'mr-[450px]' : 'mr-0'}`}>

@@ -8,17 +8,11 @@ import Loading from '@/app/loading';
 import { NotFound } from '@/app/not-found';
 import Image from 'next/image';
 
-// Mapping trạng thái đơn hàng sang nhãn tiếng Việt (dùng khi hiển thị)
+// Mapping trạng thái đơn hàng sang nhãn tiếng Việt
 const ORDER_STATUS_LABELS: Record<string, string> = {
-  pending: 'Chờ xử lý',
-  awaiting_payment: 'Chờ thanh toán',
-  paid_confirmed: 'Đã thanh toán',
+  pending: 'Chờ xác nhận',
   confirmed: 'Đã xác nhận',
-  processing: 'Đang xử lý',
-  shipped: 'Đã giao',
-  delivered: 'Đã hoàn thành',
   cancelled: 'Đã hủy',
-  refunded: 'Hoàn tiền',
 };
 
 function getOrderStatusLabel(status?: string) {
@@ -29,7 +23,7 @@ function getOrderStatusLabel(status?: string) {
 
 function isAwaitingPayment(status?: string) {
   const s = String(status || '').toLowerCase();
-  return s.includes('await') || s.includes('pending') || s.includes('chờ') || s.includes('awaiting_payment');
+  return s === 'pending';
 }
 
 export default function OrdersPage() {
@@ -43,6 +37,8 @@ export default function OrdersPage() {
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; orderId: string | null }>({ isOpen: false, orderId: null });
+  const [cancelModal, setCancelModal] = useState<{ isOpen: boolean; orderId: string | null }>({ isOpen: false, orderId: null });
+  const [cancelReason, setCancelReason] = useState('');
 
   // Derived filtered orders based on search and status
   const filteredOrders = useMemo(() => {
@@ -52,11 +48,9 @@ export default function OrdersPage() {
     const matchesFilter = (o: unknown) => {
       if (status === 'ALL') return true;
       const s = `${(o as { status?: string }).status || ''}`.toLowerCase();
-      const p = `${(o as { payment_status?: string }).payment_status || ''}`.toLowerCase();
-      if (status === 'PENDING') return s.includes('pending') || p.includes('chờ') || p.includes('pending');
-      if (status === 'SHIPPING') return s.includes('ship') || s.includes('processing') || p.includes('ship');
-      if (status === 'PAID') return p.includes('paid') || p.includes('đã') || s.includes('confirmed') || s.includes('delivered');
-      if (status === 'CANCELLED') return s.includes('cancel') || p.includes('fail') || p.includes('thất') || s.includes('hủy');
+      if (status === 'PENDING') return s === 'pending';
+      if (status === 'PAID') return s === 'confirmed';
+      if (status === 'CANCELLED') return s === 'cancelled';
       return true;
     };
 
@@ -116,9 +110,9 @@ export default function OrdersPage() {
   const handleApprovePayment = async (orderId: string) => {
     try {
       setActionLoading(prev => ({ ...prev, [orderId]: true }));
-      await api.put(`/api/v1/admin/orders/${orderId}`, { payment_status: 'paid', is_paid: true, status: 'confirmed' });
+      await api.put(`/api/v1/admin/orders/${orderId}`, { status: 'confirmed' });
       await loadOrders();
-      setToastMessage('Đã phê duyệt thanh toán');
+      setToastMessage('Đã phê duyệt đơn hàng');
     } catch (err) {
       setToastMessage('Phê duyệt thất bại');
     } finally {
@@ -127,15 +121,26 @@ export default function OrdersPage() {
   };
 
   const handleDenyPayment = async (orderId: string) => {
+    setCancelModal({ isOpen: true, orderId });
+  };
+
+  const confirmCancelOrder = async () => {
+    const id = cancelModal.orderId;
+    if (!id || !cancelReason.trim()) return;
+    setCancelModal({ isOpen: false, orderId: null });
     try {
-      setActionLoading(prev => ({ ...prev, [orderId]: true }));
-      await api.put(`/api/v1/admin/orders/${orderId}`, { payment_status: 'failed', is_paid: false, status: 'cancelled' });
+      setActionLoading(prev => ({ ...prev, [id]: true }));
+      await api.put(`/api/v1/admin/orders/${id}`, {
+        status: 'cancelled',
+        cancel_reason: cancelReason.trim(),
+      });
       await loadOrders();
-      setToastMessage('Đã từ chối thanh toán');
+      setToastMessage('Đã hủy đơn hàng');
+      setCancelReason('');
     } catch (err) {
-      setToastMessage('Thao tác thất bại');
+      setToastMessage('Hủy đơn hàng thất bại');
     } finally {
-      setActionLoading(prev => ({ ...prev, [orderId]: false }));
+      setActionLoading(prev => ({ ...prev, [id]: false }));
     }
   };
 
@@ -165,7 +170,7 @@ export default function OrdersPage() {
   }
 
 return (
-    <div className="min-h-screen bg-[#F3F4F6] text-[#111827] font-sans pb-24">
+    <div className="min-h-screen bg-[#F3F4F6] text-[#111827] pb-24">
       
       {/* 4. KHỐI NỘI DUNG CHƯƠNG TRÌNH */}
       <main className="max-w-7xl mx-auto px-6 mt-12">
@@ -199,8 +204,7 @@ return (
                   {[
                     { id: 'ALL', label: 'TẤT CẢ' },
                     { id: 'PENDING', label: 'CHỜ DUYỆT' },
-                    { id: 'SHIPPING', label: 'ĐANG GIAO' },
-                    { id: 'PAID', label: 'ĐÃ TRẢ' },
+                    { id: 'PAID', label: 'ĐÃ DUYỆT' },
                     { id: 'CANCELLED', label: 'ĐÃ HỦY' }
                   ].map((filter) => (
                     <button
@@ -241,15 +245,14 @@ return (
               <div className="divide-y divide-gray-100">
                 {filteredOrders.length > 0 ? (
                   filteredOrders.map((order) => {
-                    const paymentStatusNorm = `${(order as { payment_status?: string }).payment_status || ''}`.toLowerCase();
                     const statusNorm = `${(order as { status?: string }).status || ''}`.toLowerCase();
 
-                    const isConfirmed = paymentStatusNorm.includes('paid') || paymentStatusNorm.includes('đã') || statusNorm.includes('paid') || statusNorm.includes('confirmed') || statusNorm.includes('delivered');
-                    const isCanstaled = paymentStatusNorm.includes('fail') || paymentStatusNorm.includes('thất') || statusNorm.includes('cancel') || statusNorm.includes('hủy');
-                    const isPendingApproval = paymentStatusNorm.includes('pending') || paymentStatusNorm.includes('chờ') || statusNorm.includes('pending') || statusNorm.includes('awaiting');
+                    const isConfirmed = statusNorm === 'confirmed';
+                    const isCancelled = statusNorm === 'cancelled';
+                    const isPendingApproval = statusNorm === 'pending';
 
                     // Màu sắc dot và badge trạng thái
-                    const dotStatusClass = isConfirmed ? 'bg-green-500' : isCanstaled ? 'bg-red-500' : 'bg-amber-500';
+                    const dotStatusClass = isConfirmed ? 'bg-green-500' : isCancelled ? 'bg-red-500' : 'bg-amber-500';
 
                     return (
                       <div 
@@ -264,14 +267,10 @@ return (
                               ? 'bg-amber-500 text-white animate-pulse'
                               : isConfirmed
                               ? 'bg-green-600 text-white'
-                              : isCanstaled
+                              : isCancelled
                               ? 'bg-red-600 text-white'
                               : 'bg-gray-400 text-white'
                           }`}>
-                            {String((order as { payment_status?: string }).payment_status ?? '').toUpperCase()}
-                          </span>
-
-                          <span className="bg-[#111827] text-white px-3 py-1 rounded-full text-[9px] font-black tracking-widest">
                             {getOrderStatusLabel((order as { status?: string }).status)}
                           </span>
                         </div>
@@ -326,7 +325,7 @@ return (
                           
                             <div className="flex items-baseline justify-between pt-1 border-t border-gray-50">
                             <span className="text-[9px] font-black uppercase tracking-wider text-gray-400">TỔNG THU HỘ COD:</span>
-                            <span className="text-xl font-black text-red-600">{Number(order.total_amount ?? order.created_at ?? 0).toLocaleString()}đ</span>
+                            <span className="text-xl font-black text-red-600">{Number(order.total_amount ?? 0).toLocaleString()}đ</span>
                           </div>
                         </div>
 
@@ -538,6 +537,18 @@ return (
                 </div>
               )}
 
+              {/* LÝ DO HỦY (nếu đơn đã hủy) */}
+              {selectedOrder.status === 'cancelled' && selectedOrder.cancel_reason && (
+                <div className="space-y-3 pt-4 border-t border-gray-100">
+                  <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest text-red-600">
+                    Lý do hủy đơn
+                  </h4>
+                  <div className="bg-red-50 p-5 rounded-3xl border border-red-100">
+                    <p className="text-sm font-bold text-red-800">{selectedOrder.cancel_reason}</p>
+                  </div>
+                </div>
+              )}
+
               {/* CHI TIẾT THANH TOÁN (PAYMENT_PROOF_URL) */}
               <div className="space-y-4 pt-4 border-t border-gray-100">
                 <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">
@@ -603,15 +614,14 @@ return (
 
             </div>
 
-            {/* Modal Footer (Chứa các nút CONFIRM / DENY SIÊU TO) */}
+            {/* Modal Footer (Chứa các nút CONFIRM / HỦY) */}
             <div className="p-8 border-t border-gray-100 bg-gray-50 sticky bottom-0 z-10">
               {isAwaitingPayment(selectedOrder.status) ? (
                 <div className="flex flex-col sm:flex-row gap-4">
-                  {/* Nút Từ chối (DENY) TO */}
+                  {/* Nút Hủy đơn */}
                   <button
-                    onClick={async () => {
-                      await handleDenyPayment(selectedOrder.id);
-                      setSelectedOrder(null);
+                    onClick={() => {
+                      setCancelModal({ isOpen: true, orderId: selectedOrder.id });
                     }}
                     disabled={!!actionLoading[selectedOrder.id]}
                     className={`flex-1 py-4 ${actionLoading[selectedOrder.id] ? 'bg-red-400 cursor-wait' : 'bg-red-600 hover:bg-red-700'} active:scale-95 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition shadow-xl shadow-red-200 flex items-center justify-center gap-2`}
@@ -621,12 +631,12 @@ return (
                     ) : (
                       <>
                         <X size={18} strokeWidth={3} />
-                        <span>TỪ CHỐI GIAO DỊCH (DENY)</span>
+                        <span>HỦY ĐƠN HÀNG</span>
                       </>
                     )}
                   </button>
 
-                  {/* Nút Phê duyệt (CONFIRM) TO */}
+                  {/* Nút Phê duyệt */}
                   <button
                     onClick={async () => {
                       await handleApprovePayment(selectedOrder.id);
@@ -640,14 +650,16 @@ return (
                     ) : (
                       <>
                         <Check size={18} strokeWidth={3} />
-                        <span>PHÊ DUYỆT THANH TOÁN (CONFIRM)</span>
+                        <span>PHÊ DUYỆT ĐƠN HÀNG</span>
                       </>
                     )}
                   </button>
                 </div>
               ) : (
                 <div className="text-center py-2 text-xs font-black text-gray-400 uppercase tracking-widest">
-                  Đơn hàng này đã hoàn tất quá trình kiểm soát thanh toán.
+                  {selectedOrder.status === 'cancelled'
+                    ? 'Đơn hàng này đã bị hủy.'
+                    : 'Đơn hàng này đã được phê duyệt.'}
                 </div>
               )}
             </div>
@@ -660,6 +672,53 @@ return (
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-[#111827] text-white py-3.5 px-6 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold border border-gray-800 animate-slideUp">
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Modal nhập lý do hủy đơn */}
+      {cancelModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-gray-100 animate-slideUp">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                <X size={28} className="text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Hủy đơn hàng?</h3>
+              <p className="text-gray-500 mb-6 leading-relaxed text-sm">
+                Vui lòng nhập lý do hủy đơn. User sẽ nhìn thấy lý do này.
+              </p>
+              <textarea
+                autoFocus
+                placeholder="Nhập lý do hủy đơn..."
+                rows={3}
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-red-100 focus:border-red-600 outline-none transition font-bold resize-none text-sm mb-6"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setCancelModal({ isOpen: false, orderId: null });
+                    setCancelReason('');
+                  }}
+                  className="flex-1 py-3 px-6 rounded-2xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition-all active:scale-[0.97]"
+                >
+                  Hủy thao tác
+                </button>
+                <button
+                  onClick={confirmCancelOrder}
+                  disabled={!cancelReason.trim()}
+                  className={`flex-1 py-3 px-6 rounded-2xl font-semibold transition-all active:scale-[0.97] shadow-lg ${
+                    cancelReason.trim()
+                      ? 'bg-red-600 text-white hover:bg-red-700 shadow-red-200'
+                      : 'bg-red-200 text-white cursor-not-allowed'
+                  }`}
+                >
+                  Xác nhận hủy
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

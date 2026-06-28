@@ -42,7 +42,7 @@ const ContactPage = () => {
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 font-sans overflow-hidden">
+    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
       {/* Main Content Area (Tự động lấp đầy chiều cao còn lại) */}
       <main className="flex-1 overflow-hidden p-6 md:p-8 flex flex-col items-center justify-center">
         <div className="max-w-6xl w-full h-full max-h-[700px] flex flex-col lg:flex-row gap-6">

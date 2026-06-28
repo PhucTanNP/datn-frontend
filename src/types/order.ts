@@ -1,14 +1,4 @@
-import { Product } from './product';
-
-export type OrderStatus =
-  | 'pending'
-  | 'awaiting_payment'
-  | 'paid_confirmed'
-  | 'processing'
-  | 'shipped'
-  | 'delivered'
-  | 'cancelled'
-  | 'refunded';
+export type OrderStatus = 'pending' | 'confirmed' | 'cancelled';
 
 export interface OrderItem {
   id: string;
@@ -32,13 +22,13 @@ export interface Order {
   order_number: string;
   status: OrderStatus;
   subtotal: number;
-  discount_amount: number;
   shipping_fee: number;
   total_amount: number;
   shipping_name: string;
   shipping_phone: string;
   shipping_address: string;
   notes?: string;
+  cancel_reason?: string;
   // Payment fields
   payment_phone?: string;
   payment_proof_url?: string;

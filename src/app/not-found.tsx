@@ -3,7 +3,7 @@ import { Home, ArrowLeft, Search } from 'lucide-react';
 
 export const NotFound = () => {
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-6 font-sans">
+    <div className="min-h-screen bg-white flex items-center justify-center p-6">
       <div className="max-w-2xl w-full text-center">
         {/* Minh họa số 404 lớn với hiệu ứng vết bánh xe */}
         <div className="relative inline-block mb-8">

@@ -4,7 +4,7 @@ import { Lock, LogIn, Home, MessageCircle, ShoppingBag, ShieldCheck } from 'luci
 
 export const PleaseLogin = () => {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       
       {/* Main Content */}
       <main className="flex-grow flex items-center justify-center p-6">

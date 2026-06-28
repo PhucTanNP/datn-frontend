@@ -29,17 +29,13 @@ interface AnalyticsData {
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-400',
-  confirmed: 'bg-blue-400',
-  shipping: 'bg-purple-400',
-  delivered: 'bg-green-400',
+  confirmed: 'bg-green-400',
   cancelled: 'bg-gray-400',
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'Chờ xử lý',
+  pending: 'Chờ xác nhận',
   confirmed: 'Đã xác nhận',
-  shipping: 'Đang giao',
-  delivered: 'Đã giao',
   cancelled: 'Đã hủy',
 };
 

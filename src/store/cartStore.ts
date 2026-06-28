@@ -32,8 +32,8 @@ export const useCartStore = create<CartState>()(
             items: [...currentItems, {
               product_id: product.id,
               quantity,
-              unit_price: product.price,
-              total_price: product.price * quantity,
+              unit_price: product.salePrice ?? product.price,
+              total_price: (product.salePrice ?? product.price) * quantity,
               product,
             }],
           });
