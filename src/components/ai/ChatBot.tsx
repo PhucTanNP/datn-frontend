@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Loader2, ImageUp, ChevronDown } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Zap, BrainCircuit, ChevronDown } from 'lucide-react';
 import api from '@/lib/api';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
   actions?: { label: string; value: string }[];
-  isInspect?: boolean;
 }
 
 export default function ChatBot() {
@@ -18,10 +17,9 @@ export default function ChatBot() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [, setInspectFile] = useState<File | null>(null);
+  const [mode, setMode] = useState<'fast' | 'deep'>('fast');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [touchStart, setTouchStart] = useState(0);
 
   // Auto scroll khi có tin nhắn mới
@@ -58,6 +56,7 @@ export default function ChatBot() {
       const res = await api.post('/api/v1/chat', {
         message: msg,
         history: messages.slice(-6),
+        mode: mode,
       });
       const reply = res.data.data;
       setMessages(prev => [...prev, {
@@ -75,51 +74,8 @@ export default function ChatBot() {
     }
   };
 
-  const handleInspectUpload = async (file: File) => {
-    setInspectFile(file);
-    setLoading(true);
-
-    const formData = new FormData();
-    formData.append('image', file);
-
-    setMessages(prev => [...prev, {
-      role: 'user',
-      text: '🔬 Kiểm tra lốp xe của tôi',
-      isInspect: true,
-    }]);
-
-    try {
-      const res = await api.post('/api/v1/chat/inspect', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      const data = res.data.data;
-
-      const resultText = [
-        '🔬 <strong>Kết quả kiểm tra lốp</strong><br/>',
-        `📊 <strong>Độ mòn:</strong> ${data.wear_level} (${data.wear_percentage}%)`,
-        `🛞 <strong>Loại lốp:</strong> ${data.tire_type_detected}`,
-        data.crack_detected ? '⚠️ <strong>Phát hiện vết nứt!</strong> Cần kiểm tra gấp.' : '✅ <strong>Không phát hiện vết nứt</strong>',
-        `📝 <strong>Gợi ý:</strong> ${data.recommendation}`,
-      ].join('<br/>');
-
-      setMessages(prev => [...prev, { role: 'assistant', text: resultText }]);
-    } catch {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        text: '❌ Không thể phân tích ảnh. Vui lòng thử ảnh khác!'
-      }]);
-    } finally {
-      setLoading(false);
-      setInspectFile(null);
-    }
-  };
-
   const handleAction = (value: string) => {
-    if (value === 'inspect') {
-      fileInputRef.current?.click();
-    } else {
-      sendMessage(value);
-    }
+    sendMessage(value);
   };
 
   return (
@@ -235,7 +191,12 @@ export default function ChatBot() {
             {loading && (
               <div className="flex justify-start">
                 <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                  <Loader2 size={18} className="animate-spin text-red-600" />
+                  <div className="flex items-center gap-2">
+                    <Loader2 size={18} className="animate-spin text-red-600" />
+                    <span className="text-xs text-gray-400">
+                      {mode === 'deep' ? '🧠 Deep mode...' : '⚡ Fast mode...'}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
@@ -244,39 +205,35 @@ export default function ChatBot() {
 
           {/* Input */}
           <div className="border-t border-gray-100 p-3 bg-white flex-shrink-0 pb-safe-or-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={e => {
-                const file = e.target.files?.[0];
-                if (file) handleInspectUpload(file);
-              }}
-            />
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors active:scale-90 flex-shrink-0"
-                title="Chụp ảnh lốp"
+            <div className="flex items-center gap-1.5">
+              <select
+                value={mode}
+                onChange={e => setMode(e.target.value as 'fast' | 'deep')}
+                className="text-[10px] bg-white rounded-md px-1.5 py-2 outline-none border border-gray-200 cursor-pointer text-gray-500 font-medium flex-shrink-0"
               >
-                <ImageUp size={22} />
-              </button>
-              <input
+                <option value="fast">⚡ Fast</option>
+                <option value="deep">🧠 Deep</option>
+              </select>
+              <textarea
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendMessage()}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
                 placeholder="Nhập tin nhắn..."
-                className="flex-1 bg-gray-100 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-red-200 border border-transparent focus:border-red-300 transition-all"
+                rows={1}
+                className="flex-1 bg-gray-100 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-red-200 border border-transparent focus:border-red-300 transition-all resize-none overflow-y-auto max-h-32"
               />
               <button
                 onClick={() => sendMessage()}
                 disabled={!input.trim() || loading}
-                className="p-3 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-90 flex-shrink-0"
+                className="p-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-90 flex-shrink-0"
               >
-                {loading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               </button>
             </div>
           </div>
