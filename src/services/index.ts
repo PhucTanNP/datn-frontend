@@ -14,5 +14,5 @@
 export { sendChatMessage, inspectTire as chatInspectTire } from './chatService';
 export type { ChatMessage, ChatResponse } from './chatService';
 
-export { inspectTire, getInspectionHistory } from './inspectionService';
-export type { InspectionResult, CrackLocation } from './inspectionService';
+export { inspectTire, scanTire, getInspectionHistory } from './inspectionService';
+export type { InspectionResult, CrackLocation, ScanResponse, ScanDetectResult, TireRecommendItem, PatternBenefit, VehicleInfo } from './inspectionService';

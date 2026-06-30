@@ -1,6 +1,6 @@
 // src/components/cart/CartItem.tsx
 import { CartItem as CartItemType } from '@/types/cart';
-import { Minus, Plus, Trash2 } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 
 interface CartItemProps {
@@ -18,13 +18,19 @@ export function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
     <div className="bg-white rounded-2xl p-4 sm:p-6 mb-3 sm:mb-4 shadow-sm border border-gray-50 flex gap-3 sm:gap-6">
       {/* Hình ảnh */}
       <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0">
-        <Image
-          src={product.images?.url || '/placeholder.jpg'}
-          alt={product.name}
-          width={96}
-          height={96}
-          className="w-full h-full object-cover"
-        />
+        {product.images?.url ? (
+          <Image
+            src={product.images.url}
+            alt={product.name}
+            width={96}
+            height={96}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+            <ShoppingBag size={28} className="text-gray-300" strokeWidth={1.5} />
+          </div>
+        )}
       </div>
 
       {/* Thông tin */}

@@ -39,6 +39,7 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+import { Toaster } from 'sonner';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import ChatBot from '@/components/ai/ChatBot';
@@ -58,6 +59,7 @@ export default function RootLayout({
         <main className="flex-1">{children}</main>
         <Footer />
         <ChatBot />
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );
